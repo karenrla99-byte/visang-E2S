@@ -1,0 +1,17 @@
+{
+  "name": "bookrest",
+  "version": "0.1.0",
+  "private": true,
+  "description": "BookRest (북레스트) - 독서 기록과 창작물을 모으는 픽셀 도서관 웹앱 (1차 MVP)",
+  "type": "module",
+  "engines": { "node": ">=22.13" },
+  "scripts": {
+    "start": "node --no-warnings server/index.js",
+    "dev": "node --no-warnings --watch server/index.js",
+    "test": "node --no-warnings --test tests/*.test.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "multer": "^2.0.2"
+  }
+}
