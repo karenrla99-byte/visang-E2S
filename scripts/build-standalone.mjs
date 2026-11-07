@@ -55,4 +55,5 @@ html = html.replace(/<link rel="preload"[^>]*>\s*/, '').replace('<link rel="styl
   .replace('<script type="module" src="/app.js"></script>', () => `<script>window.__SEED__=${JSON.stringify(seed).replaceAll('</', '<\\/')};</script>\n<script>${js}</script>`);
 fs.mkdirSync(P('dist'), { recursive: true });
 fs.writeFileSync(P('dist/bookrest-standalone.html'), html);
+fs.writeFileSync(P('dist/index.html'), html); // 정적 호스팅(Vercel 등)용
 console.log(`dist/bookrest-standalone.html  ${(html.length / 1024 / 1024).toFixed(2)} MB  (책 ${books.length}권, 독자 ${users.length}명, 기록 ${contents.length}개)`);

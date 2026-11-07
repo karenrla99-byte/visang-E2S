@@ -46,6 +46,8 @@ export async function loadSprites() {
   return SPR.base;
 }
 export const hasSprites = () => SPR.base;
+/** 이미지 캐릭터일 때 이 아이템의 겹침 그림이 있는지(없으면 착용해도 그림에는 안 나타난다) */
+export const hasItemSprite = (id) => SPR.items.has(id);
 const ROW = { down: 0, left: 1, right: 2, up: 3 };
 /** 스프라이트가 있으면 겹친 이미지, 없으면 코드 도트 SVG를 돌려준다. */
 export function avatarHtml(avatar = {}, face = 'down') {

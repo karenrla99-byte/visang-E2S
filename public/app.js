@@ -85,7 +85,7 @@ function workCard(c, { book } = {}) {
 
 // ---------- 내비게이션 ----------
 const NAV = [['#/home', '마을 홈'], ['#/library', '대도서관'], ['#/shelf', '내 서재'], ['#/gallery', '창작 전시관'], ['#/funding', '굿즈 펀딩']];
-const SHOP_OPEN = false; // 꾸미기는 나중에 구현
+const SHOP_OPEN = true;
 function renderNav() {
   const top = $('#topbar'); const nav = $('#nav');
   top.hidden = !state.me;
@@ -102,7 +102,7 @@ async function refreshMe() { try { state.me = (await api('GET', '/api/me')).user
 const pts = (n) => (n ? ` (+${n}P)` : '');
 
 import { mountVillage, BUILDINGS } from './village.js';
-import { avatarSvg, avatarHtml, loadSprites, LOOK } from './avatar.js';
+import { avatarSvg, avatarHtml, loadSprites, hasSprites, hasItemSprite, LOOK } from './avatar.js';
 
 const GALLERY_TABS = [['all', '전체'], ['fanart', '팬아트 일러스트'], ['goods', '굿즈 기획'], ['spinoff', '외전·패러렐 글'], ['webtoon', '웹툰 콘티'], ['etc', '기타']];
 const STATUS = { reading: '읽는 중', completed: '완독', want_to_read: '읽고 싶은' };
@@ -526,10 +526,12 @@ views.shop = async () => {
   let d;
   try { d = await api('GET', '/api/shop'); } catch (e) { return failure(e, views.shop); }
   const slots = [['hat', '모자'], ['outfit', '옷'], ['accessory', '소품']];
+  // 이미지 캐릭터에서 겹침 그림이 없는 착용 아이템(= 착용해도 그림에 안 나타나는 것)
+  const missingLook = (av) => ['hat', 'outfit', 'accessory'].map((sl) => d.items.find((i) => i.id === av[sl])).filter((i) => i && !hasItemSprite(i.id));
   const draw = () => {
     render(h`<h1>꾸미기 상점</h1><p class="muted">책을 담고 기록을 남기며 모은 독서 포인트로 캐릭터를 꾸며요. 현재 <b>${d.points.toLocaleString()}P</b></p>
       <div class="shop-grid"><div><div class="avprev" aria-label="캐릭터 미리보기">${new Raw(avatarHtml(d.avatar, 'down'))}</div>
-        <div class="card" style="margin-top:12px"><b class="small">피부색</b><div class="skins" role="group" aria-label="피부색">${d.skins.map((c) => h`<button type="button" class="skin" data-skin="${c}" style="background:${c}" aria-label="피부색 ${c}" aria-pressed="${d.avatar.skin === c}"></button>`)}</div></div></div>
+        ${hasSprites() ? h`<div class="card small" style="margin-top:12px"><b>캐릭터 이미지 사용 중</b><br>피부색은 이미지 캐릭터에 적용되지 않아요.${missingLook(d.avatar).length > 0 && h`<p class="err" style="margin:8px 0 0">착용한 ${missingLook(d.avatar).map((i) => i.name).join(', ')}의 그림은 준비 중이라 캐릭터에는 아직 표시되지 않아요.</p>`}</div>` : h`<div class="card" style="margin-top:12px"><b class="small">피부색</b><div class="skins" role="group" aria-label="피부색">${d.skins.map((c) => h`<button type="button" class="skin" data-skin="${c}" style="background:${c}" aria-label="피부색 ${c}" aria-pressed="${d.avatar.skin === c}"></button>`)}</div></div>`}</div>
         <div class="stack">${slots.map(([slot, label]) => h`<section><h2>${label}</h2><div class="items">${d.items.filter((i) => i.slot === slot).map((i) => {
           const own = d.inventory.includes(i.id); const worn = d.avatar[slot] === i.id;
           return h`<div class="item ${worn ? 'on' : ''}"><span class="ic" aria-hidden="true">${i.icon}</span><b>${i.name}</b><p>${i.description}</p>
@@ -615,8 +617,8 @@ function dropStage() {
   stageOn = false; stageStop?.(); stageStop = null; const st = $('#stage'); st.innerHTML = ''; st.hidden = true; document.body.classList.remove('in-stage');
 }
 const showWin = (on) => { $('#win').hidden = !on; $('#winback').hidden = !on; };
-const WIN_TABS = [['library', '#/library', '대도서관'], ['shelf', '#/shelf', '내 서재'], ['gallery', '#/gallery', '창작 전시관'], ['funding', '#/funding', '굿즈 펀딩']];
-const TAB_OF = { library: 'library', book: 'library', shelf: 'shelf', myBook: 'shelf', write: 'shelf', gallery: 'gallery', funding: 'funding' };
+const WIN_TABS = [['library', '#/library', '대도서관'], ['shelf', '#/shelf', '내 서재'], ['gallery', '#/gallery', '창작 전시관'], ['funding', '#/funding', '굿즈 펀딩'], ['shop', '#/shop', '꾸미기 상점']];
+const TAB_OF = { library: 'library', book: 'library', shelf: 'shelf', myBook: 'shelf', write: 'shelf', gallery: 'gallery', funding: 'funding', shop: 'shop' };
 function renderWinTabs(name) {
   if (TAB_OF[name]) lastTab = TAB_OF[name];
   const cur = TAB_OF[name] || (name === 'work' || name === 'user' ? lastTab : null);

@@ -14,7 +14,7 @@ export const BUILDINGS = [
   { id: 'library', name: '대도서관', sub: 'Great Library', go: '#/library', pin: [25, 34], door: [25, 57], desc: '책 검색·탐색·추천, 책별 독자 기록' },
   { id: 'gallery', name: '창작 전시관', sub: 'Creative Pavilion', go: '#/gallery', pin: [52, 26], door: [52, 50], desc: '독자들의 팬아트·굿즈 기획·웹툰 전시' },
   { id: 'shelf', name: '내 서재', sub: 'My Study Cabin', go: '#/shelf', pin: [79, 42], door: [79, 65], desc: '내 책장과 개인 기록 관리' },
-  { id: 'shop', name: '꾸미기 상점', sub: '준비 중', soon: '꾸미기 상점', pin: [22, 69], door: [23, 77], desc: '캐릭터 꾸미기(준비 중)' },
+  { id: 'shop', name: '꾸미기 상점', sub: 'Avatar Boutique', go: '#/shop', pin: [22, 69], door: [23, 77], desc: '독서 포인트로 캐릭터 꾸미기' },
   { id: 'funding', name: '굿즈 펀딩', sub: 'Goods Funding', go: '#/funding', pin: [74, 20], door: [74, 26], desc: '굿즈 기획에 관심을 모으고 제작을 응원' },
 ];
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
