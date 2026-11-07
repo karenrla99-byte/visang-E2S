@@ -64,7 +64,11 @@ export function openDb(file) {
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now')),
     published_at TEXT,
-    base_likes INTEGER NOT NULL DEFAULT 0
+    base_likes INTEGER NOT NULL DEFAULT 0,
+    funding_goal INTEGER NOT NULL DEFAULT 0,
+    funding_note TEXT NOT NULL DEFAULT '',
+    base_interest INTEGER NOT NULL DEFAULT 0,
+    intro TEXT NOT NULL DEFAULT ''
   );
   CREATE INDEX IF NOT EXISTS idx_contents_book ON contents(book_id, visibility, hidden);
   CREATE INDEX IF NOT EXISTS idx_contents_user ON contents(user_id, book_id);
@@ -78,6 +82,12 @@ export function openDb(file) {
     external_url TEXT NOT NULL DEFAULT ''
   );
   CREATE TABLE IF NOT EXISTS likes (
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    content_id INTEGER NOT NULL REFERENCES contents(id) ON DELETE CASCADE,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (user_id, content_id)
+  );
+  CREATE TABLE IF NOT EXISTS interests (
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     content_id INTEGER NOT NULL REFERENCES contents(id) ON DELETE CASCADE,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -121,6 +131,8 @@ export function openDb(file) {
   ensure('books', 'translator', "TEXT NOT NULL DEFAULT ''"); ensure('books', 'tags', "TEXT NOT NULL DEFAULT '[]'");
   ensure('books', 'published_year', 'INTEGER'); ensure('books', 'page_count', 'INTEGER');
   ensure('shelf', 'status', "TEXT NOT NULL DEFAULT 'reading'"); ensure('contents', 'base_likes', 'INTEGER NOT NULL DEFAULT 0');
+  ensure('contents', 'funding_goal', 'INTEGER NOT NULL DEFAULT 0'); ensure('contents', 'funding_note', "TEXT NOT NULL DEFAULT ''"); ensure('contents', 'base_interest', 'INTEGER NOT NULL DEFAULT 0');
+  ensure('contents', 'intro', "TEXT NOT NULL DEFAULT ''");
   ensure('attachments', 'external_url', "TEXT NOT NULL DEFAULT ''");
   return db;
 }

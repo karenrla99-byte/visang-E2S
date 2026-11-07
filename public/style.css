@@ -175,3 +175,53 @@ main:focus, main:focus-visible { box-shadow: none !important; outline: none; }
 .vplayer.walking .spritebox .lay { animation: sprwalk .6s steps(1) infinite; }
 @keyframes sprwalk { 0% { background-position-x: 0%; } 25% { background-position-x: 33.333%; } 50% { background-position-x: 66.667%; } 75% { background-position-x: 100%; } }
 .avprev .spritebox { height: 220px; width: auto; margin-bottom: 14px; } .me-chip .spritebox { width: 100%; height: 100%; }
+
+/* ===== 전체화면 마을 + 건물 탭 창 ===== */
+#stage { position: fixed; inset: 0; z-index: 1; }
+#stage[hidden], #win[hidden], #winback[hidden] { display: none !important; }
+.pcam { position: absolute; inset: 0; overflow: hidden; background: #355E3B; cursor: pointer; touch-action: manipulation; user-select: none; }
+.pcam:focus-visible { box-shadow: inset 0 0 0 6px #FFE27A !important; }
+.pworld { position: absolute; left: 0; top: 0; will-change: transform; container-type: inline-size; }
+.pworld .pmap { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; pointer-events: none; }
+.pworld .vpin .vsign { font-size: clamp(.7rem, 1.6cqw, 1.5rem); box-shadow: 0 5px 0 rgba(43, 29, 18, .4); }
+.pworld .vsub { font-size: clamp(.55rem, 1.1cqw, 1rem); }
+.pworld .vprompt { font-size: clamp(.6rem, 1.3cqw, 1.2rem); }
+.pworld .vname { font-size: clamp(.55rem, 1.2cqw, 1.1rem); }
+.vnear { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 40; }
+.vnear .key { background: var(--bg); padding: 0 6px; margin-left: 6px; box-shadow: inset 0 0 0 2px var(--navy); }
+.vhint { z-index: 40; }
+body.in-stage { overflow: hidden; }
+body.in-stage #topbar { position: fixed; top: 0; left: 0; right: 0; z-index: 60; }
+#winback { position: fixed; inset: 0; z-index: 55; background: rgba(24, 16, 10, .42); cursor: pointer; }
+#win { position: fixed; z-index: 65; left: 50%; top: 82px; bottom: 18px; width: min(1120px, 96vw); transform: translateX(-50%); display: flex; flex-direction: column; background: var(--bg); box-shadow: 0 0 0 5px var(--navy), 0 10px 0 5px rgba(43, 29, 18, .45); }
+.wintitle { display: flex; align-items: stretch; justify-content: space-between; gap: 8px; background: var(--brown); padding: 8px 8px 0 12px; border-bottom: 4px solid var(--navy); flex: none; }
+#wintabs { display: flex; flex-wrap: wrap; gap: 4px; align-items: flex-end; }
+.wtab { display: inline-flex; align-items: center; min-height: 40px; padding: 4px 16px; color: #F7E9CF; text-decoration: none; background: rgba(0, 0, 0, .18); box-shadow: inset 0 0 0 3px var(--navy); }
+.wtab:hover { background: rgba(255, 255, 255, .18); }
+.wtab.on { background: var(--bg); color: var(--navy); font-weight: 700; box-shadow: inset 0 0 0 3px var(--navy); margin-bottom: -4px; min-height: 44px; }
+.wintitle .btn { align-self: center; margin-bottom: 8px; }
+#winbody { flex: 1; overflow: auto; padding: 20px 22px 40px; outline: none; }
+@media (max-width: 760px) { #win { top: 70px; bottom: 0; width: 100vw; } #winbody { padding: 14px 12px 40px; } .wtab { padding: 4px 9px; font-size: .88rem; } }
+
+/* ===== 굿즈 펀딩(관심 표시) ===== */
+.fund { border: 4px solid var(--navy); background: #fff; padding: 8px 10px; margin: 8px 0; }
+.fund-h { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: .86rem; margin-bottom: 6px; }
+.fbar { height: 20px; border: 3px solid var(--navy); background: #F1E8CF; }
+.fbar i { display: block; height: 100%; background: repeating-linear-gradient(90deg, #7CC468 0 10px, #5FA84F 10px 12px); }
+.fund.done { background: #FFF6CC; } .fund.done .fbar i { background: repeating-linear-gradient(90deg, #F2C14E 0 10px, #D79A1F 10px 12px); }
+.fnote { margin: 6px 0; font-family: var(--sans); } .fnotice { margin: 8px 0 0; font-family: var(--sans); }
+.fundcard { background: #FFFBEA; }
+.fund-hero { background: #FFFBEA; }
+.steps { list-style: none; counter-reset: s; margin: 10px 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.steps li { counter-increment: s; background: #fff; border: 4px solid var(--navy); padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; font-family: var(--sans); }
+.steps li::before { content: counter(s); align-self: flex-start; background: var(--brown); color: #fff; min-width: 28px; text-align: center; font-family: var(--pixel); font-weight: 700; }
+.steps li b { font-family: var(--pixel); } .steps li span { font-size: .88rem; }
+.fcard .gb { gap: 6px; }
+.lead { margin: 0; padding: 10px 14px; background: var(--band); border-left: 8px solid var(--brown); font-family: var(--sans); font-weight: 600; white-space: pre-wrap; overflow-wrap: anywhere; }
+.kindtabs .tab { padding: 6px 12px; font-size: .92rem; }
+/* 이미지 캐릭터는 부드럽게 줄여 보여 준다 */
+.spritebox .lay { image-rendering: auto; }
+/* 캐릭터 상자는 이름표 길이와 상관없이 그림 비율(14:19)을 유지한다 */
+.vplayer { height: 15%; aspect-ratio: 14 / 19; display: block; }
+.vplayer .vspr { width: 100%; height: 100%; }
+.vplayer .vname { position: absolute; left: 50%; bottom: 100%; transform: translateX(-50%); margin: 0 0 3px; }

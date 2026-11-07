@@ -12,27 +12,31 @@ import { oauthRoutes, enabledProviders } from './oauth.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// template: 작성란 모양.  line=한 줄, essay=제목+본문, image=제목+이미지(필수)+소개, story=제목+소개칸+내용칸(글 전용, 이미지 없음),
+//           goods=제목+소개+이미지(선택)+펀딩 정보, mixed=제목+소개+내용+이미지(하나 이상)
 export const KINDS = {
-  oneline: { label: '한 줄 평', creative: false },
-  review: { label: '서평·독후감', creative: false },
-  fanart: { label: '팬아트', creative: true },
-  goods: { label: '굿즈 기획', creative: true },
-  cosplay: { label: '코스프레', creative: true },
-  sidestory: { label: '외전·평행세계 글', creative: true },
-  webnovel: { label: '웹소설', creative: true },
-  webtoon: { label: '웹툰', creative: true },
-  other: { label: '기타', creative: true },
+  oneline: { label: '한 줄 평', creative: false, template: 'line' },
+  review: { label: '서평·독후감', creative: false, template: 'essay' },
+  fanart: { label: '팬아트', creative: true, template: 'image' },
+  goods: { label: '굿즈 기획', creative: true, template: 'goods' },
+  cosplay: { label: '코스프레', creative: true, template: 'image' },
+  sidestory: { label: '외전·평행세계 글', creative: true, template: 'story' },
+  webnovel: { label: '웹소설', creative: true, template: 'story' },
+  webtoon: { label: '웹툰', creative: true, template: 'image' },
+  other: { label: '기타', creative: true, template: 'mixed' },
 };
+const IMAGE_TEMPLATES = ['image', 'goods', 'mixed'];
 const CREATIVE_KINDS = Object.keys(KINDS).filter((k) => KINDS[k].creative);
 const CREATIVE_SQL = CREATIVE_KINDS.map((k) => `'${k}'`).join(',');
 // 창작 전시관 필터: 프로토타입의 5분류를 우리 종류에 묶는다
 export const GALLERY_GROUPS = {
   fanart: ['fanart'], goods: ['goods'], spinoff: ['sidestory', 'webnovel'], webtoon: ['webtoon'], etc: ['cosplay', 'other'],
 };
+export const FUNDING = { min: 10, max: 1000, def: 50, noteMax: 200 };
 export const REWARDS = { onboarding: 200, shelf: 50, oneline: 30, review: 70, creative: 120 };
 export const REPORT_REASONS = ['저작권 침해', '개인정보·초상권 침해', '성인물', '괴롭힘·혐오', '불법·유해', '스팸', '기타'];
 
-export const LIMITS = { maxImageBytes: 5 * 1024 * 1024, maxImages: 4, titleMax: 100, bodyMax: 10000, onelineMax: 300, nicknameMax: 20 };
+export const LIMITS = { maxImageBytes: 5 * 1024 * 1024, maxImages: 4, maxImagesWebtoon: 10, introMax: 500, titleMax: 100, bodyMax: 10000, onelineMax: 300, nicknameMax: 20 };
 
 const sniffImage = (buf) => {
   if (buf.length > 12 && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return ['image/jpeg', 'jpg'];
@@ -262,12 +266,17 @@ export function createApp(opts = {}) {
     const atts = db.prepare('SELECT id, alt, external_url FROM attachments WHERE content_id = ? ORDER BY id').all(c.id);
     const likes = c.base_likes + db.prepare('SELECT COUNT(*) n FROM likes WHERE content_id = ?').get(c.id).n;
     const liked = viewer ? !!db.prepare('SELECT 1 FROM likes WHERE content_id = ? AND user_id = ?').get(c.id, viewer.id) : false;
+    let funding = null;
+    if (c.kind === 'goods') {
+      const n = c.base_interest + db.prepare('SELECT COUNT(*) n FROM interests WHERE content_id = ?').get(c.id).n;
+      funding = { goal: c.funding_goal || FUNDING.def, count: n, reached: n >= (c.funding_goal || FUNDING.def), note: c.funding_note, interested: !!viewer && !!db.prepare('SELECT 1 FROM interests WHERE content_id = ? AND user_id = ?').get(c.id, viewer.id) };
+    }
     const au = db.prepare('SELECT id, nickname, avatar FROM users WHERE id = ?').get(c.user_id); const author = au && { id: au.id, nickname: au.nickname, avatar: JSON.parse(au.avatar) };
     return {
       id: c.id, book_id: c.book_id, kind: c.kind, kind_label: KINDS[c.kind]?.label, creative: !!KINDS[c.kind]?.creative,
-      title: c.title, body: c.body, visibility: c.visibility, hidden: !!c.hidden, created_at: c.created_at, published_at: c.published_at, book_title: bookRow(c.book_id)?.title,
+      title: c.title, body: c.body, intro: c.intro, template: KINDS[c.kind]?.template, visibility: c.visibility, hidden: !!c.hidden, created_at: c.created_at, published_at: c.published_at, book_title: bookRow(c.book_id)?.title,
       attachments: atts.map((a) => ({ id: a.id, alt: a.alt, url: a.external_url || `/api/files/${a.id}` })), likes, liked, author,
-      mine: viewer?.id === c.user_id,
+      mine: viewer?.id === c.user_id, funding,
     };
   });
   const isPublicVisible = 'c.visibility = \'public\' AND c.hidden = 0';
@@ -281,17 +290,20 @@ export function createApp(opts = {}) {
     // BOOK-05: 좋아요 1개 이상, 좋아요 많은 순, 동점이면 먼저 공개된 작품, 상위 3
     const top = db.prepare(`SELECT * FROM (SELECT c.*, c.base_likes + (SELECT COUNT(*) FROM likes l WHERE l.content_id = c.id) n FROM contents c
       WHERE c.book_id = ? AND ${isPublicVisible} AND c.kind IN (${CREATIVE_SQL})) WHERE n >= 1 ORDER BY n DESC, published_at ASC, id ASC LIMIT 3`).all(book.id);
-    const counts = Object.fromEntries(['oneline', 'review', 'creative'].map((t) => [t, db.prepare(
-      `SELECT COUNT(*) n FROM contents c WHERE c.book_id = ? AND ${isPublicVisible} AND ${t === 'creative' ? `c.kind IN (${CREATIVE_SQL})` : 'c.kind = ?'}`,
-    ).get(...(t === 'creative' ? [book.id] : [book.id, t])).n]));
+    // 종류마다 따로 센다(2차 창작을 한 묶음으로 합치지 않는다). 'creative'는 호환용 합계.
+    const counts = { creative: 0 };
+    for (const k of Object.keys(KINDS)) {
+      counts[k] = db.prepare(`SELECT COUNT(*) n FROM contents c WHERE c.book_id = ? AND ${isPublicVisible} AND c.kind = ?`).get(book.id, k).n;
+      if (KINDS[k].creative) counts.creative += counts[k];
+    }
     res.json({ book: { ...book, tags: JSON.parse(book.tags || '[]') }, inShelf, top: hydrate(top, req.user), counts });
   }));
 
   app.get('/api/books/:id/contents', requireUser, wrap((req, res) => {
-    const tab = ['oneline', 'review', 'creative'].includes(req.query.tab) ? req.query.tab : 'oneline';
+    const tab = req.query.tab === 'creative' || KINDS[req.query.tab] ? req.query.tab : 'oneline';
     const sort = req.query.sort === 'likes' ? 'likes' : 'latest';
     const offset = Math.max(0, parseInt(req.query.offset) || 0);
-    const kindSql = tab === 'creative' ? `c.kind IN (${CREATIVE_SQL})` : `c.kind = '${tab}'`;
+    const kindSql = tab === 'creative' ? `c.kind IN (${CREATIVE_SQL})` : `c.kind = '${tab}'`; // tab은 위에서 검증된 종류 id
     const order = sort === 'likes' ? 'n DESC, c.published_at ASC' : 'c.published_at DESC, c.id DESC';
     const rows = db.prepare(`SELECT c.*, c.base_likes + (SELECT COUNT(*) FROM likes l WHERE l.content_id = c.id) n FROM contents c
       WHERE c.book_id = ? AND ${isPublicVisible} AND ${kindSql} ORDER BY ${order} LIMIT 20 OFFSET ?`).all(req.params.id, offset);
@@ -347,11 +359,11 @@ export function createApp(opts = {}) {
   }));
 
   // ---------- 콘텐츠 작성/수정/삭제 ----------
-  const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: LIMITS.maxImageBytes, files: LIMITS.maxImages } });
-  const uploadMw = (req, res, next) => upload.array('images', LIMITS.maxImages)(req, res, (e) => {
+  const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: LIMITS.maxImageBytes, files: LIMITS.maxImagesWebtoon } });
+  const uploadMw = (req, res, next) => upload.array('images', LIMITS.maxImagesWebtoon)(req, res, (e) => {
     if (!e) return next();
     if (e.code === 'LIMIT_FILE_SIZE') return next(err(413, `이미지는 파일당 ${LIMITS.maxImageBytes / 1024 / 1024}MB 이하여야 합니다.`, 'file_too_large'));
-    if (e.code === 'LIMIT_UNEXPECTED_FILE' || e.code === 'LIMIT_FILE_COUNT') return next(err(400, `이미지는 최대 ${LIMITS.maxImages}장까지 올릴 수 있습니다.`, 'too_many_files'));
+    if (e.code === 'LIMIT_UNEXPECTED_FILE' || e.code === 'LIMIT_FILE_COUNT') return next(err(400, `이미지는 최대 ${LIMITS.maxImagesWebtoon}장까지 올릴 수 있습니다.`, 'too_many_files'));
     next(err(400, '업로드 처리 중 문제가 발생했습니다.'));
   });
 
@@ -366,7 +378,20 @@ export function createApp(opts = {}) {
     const max = kind === 'oneline' ? LIMITS.onelineMax : LIMITS.bodyMax;
     if (text.length > max) throw err(400, `본문은 ${max}자 이하로 입력해 주세요.`);
     if (kind !== 'oneline' && !title) throw err(400, '제목을 입력해 주세요.');
-    return { kind, title, text, visibility };
+    const intro = String(body.intro ?? existing?.intro ?? '').trim(); const tpl = KINDS[kind].template;
+    if (intro.length > LIMITS.introMax) throw err(400, `소개는 ${LIMITS.introMax}자 이하로 입력해 주세요.`);
+    if (tpl === 'story' && !intro) throw err(400, '소개를 입력해 주세요. (작품을 짧게 소개하는 글이에요)');
+    if (tpl === 'story' && !text) throw err(400, '내용을 입력해 주세요.');
+    if (tpl === 'goods' && !intro) throw err(400, '기획 소개를 입력해 주세요.');
+    if ((tpl === 'line' || tpl === 'essay') && !text) throw err(400, '내용을 입력해 주세요.');
+    let fundingGoal = 0; let fundingNote = '';
+    if (kind === 'goods') {
+      fundingGoal = body.fundingGoal !== undefined && body.fundingGoal !== '' ? Math.round(Number(body.fundingGoal)) : existing?.funding_goal || FUNDING.def;
+      if (!Number.isFinite(fundingGoal) || fundingGoal < FUNDING.min || fundingGoal > FUNDING.max) throw err(400, `목표 관심 수는 ${FUNDING.min}~${FUNDING.max} 사이로 입력해 주세요.`);
+      fundingNote = String(body.fundingNote ?? existing?.funding_note ?? '').trim();
+      if (fundingNote.length > FUNDING.noteMax) throw err(400, `제작 구상은 ${FUNDING.noteMax}자 이하로 입력해 주세요.`);
+    }
+    return { kind, title, text, intro, visibility, fundingGoal, fundingNote };
   }
 
   function saveImages(files, contentId, alts) {
@@ -386,18 +411,25 @@ export function createApp(opts = {}) {
 
   const getAlts = (b) => { try { return Array.isArray(b.alts) ? b.alts : JSON.parse(b.alts || '[]'); } catch { return []; } };
 
+  /** 종류별 이미지 규칙. count = 저장 후 총 이미지 수 */
+  function checkImages(f, count) {
+    const tpl = KINDS[f.kind].template; const max = f.kind === 'webtoon' ? LIMITS.maxImagesWebtoon : LIMITS.maxImages;
+    if (count && !IMAGE_TEMPLATES.includes(tpl)) throw err(400, '이 종류에는 이미지를 첨부할 수 없습니다.');
+    if (count > max) throw err(400, `이미지는 최대 ${max}장까지 올릴 수 있습니다.`, 'too_many_files');
+    if (tpl === 'image' && !count) throw err(400, '이미지를 한 장 이상 올려 주세요.', 'image_required');
+    if (tpl === 'mixed' && !count && !f.text && !f.intro) throw err(400, '소개, 내용, 이미지 중 하나는 입력해 주세요.');
+  }
   app.post('/api/contents', requireUser, uploadMw, wrap((req, res) => {
     const book = bookRow(req.body.bookId);
     if (!book) throw err(404, '책을 찾을 수 없습니다.');
     if (!db.prepare('SELECT 1 FROM shelf WHERE user_id = ? AND book_id = ?').get(req.user.id, book.id)) throw err(400, '먼저 책을 내 책장에 추가해 주세요.');
     const f = validateFields(req.body);
     const files = req.files || [];
-    if (!f.text && !files.length) throw err(400, '본문 또는 이미지를 입력해 주세요.');
-    if (files.length && KINDS[f.kind].creative === false) throw err(400, '이 종류에는 이미지를 첨부할 수 없습니다.');
+    checkImages(f, files.length);
     db.exec('BEGIN');
     try {
-      const id = db.prepare(`INSERT INTO contents (user_id, book_id, kind, title, body, visibility, published_at)
-        VALUES (?,?,?,?,?,?, ${f.visibility === 'public' ? "datetime('now')" : 'NULL'})`).run(req.user.id, book.id, f.kind, f.title, f.text, f.visibility).lastInsertRowid;
+      const id = db.prepare(`INSERT INTO contents (user_id, book_id, kind, title, body, intro, visibility, published_at, funding_goal, funding_note)
+        VALUES (?,?,?,?,?,?,?, ${f.visibility === 'public' ? "datetime('now')" : 'NULL'}, ?, ?)`).run(req.user.id, book.id, f.kind, f.title, f.text, f.intro, f.visibility, f.fundingGoal, f.fundingNote).lastInsertRowid;
       saveImages(files, id, getAlts(req.body));
       db.exec('COMMIT');
       const points = award(req.user.id, 'content', id, KINDS[f.kind].creative ? REWARDS.creative : REWARDS[f.kind]);
@@ -423,14 +455,12 @@ export function createApp(opts = {}) {
       const del = db.prepare('SELECT * FROM attachments WHERE content_id = ?').all(c.id).filter((a) => remove.includes(a.id));
       for (const a of del) db.prepare('DELETE FROM attachments WHERE id = ?').run(a.id);
       const left = db.prepare('SELECT COUNT(*) n FROM attachments WHERE content_id = ?').get(c.id).n;
-      if (left + files.length > LIMITS.maxImages) throw err(400, `이미지는 최대 ${LIMITS.maxImages}장까지 올릴 수 있습니다.`, 'too_many_files');
-      if (files.length && !KINDS[c.kind].creative) throw err(400, '이 종류에는 이미지를 첨부할 수 없습니다.');
-      if (!f.text && !left && !files.length) throw err(400, '내용을 입력해 주세요.');
+      checkImages(f, left + files.length);
       saveImages(files, c.id, getAlts(req.body));
       const becamePublic = f.visibility === 'public' && c.visibility !== 'public';
-      db.prepare(`UPDATE contents SET title = ?, body = ?, visibility = ?, updated_at = datetime('now'),
+      db.prepare(`UPDATE contents SET title = ?, body = ?, intro = ?, visibility = ?, updated_at = datetime('now'), funding_goal = ?, funding_note = ?,
         published_at = CASE WHEN ? THEN datetime('now') WHEN ? = 'private' THEN NULL ELSE published_at END WHERE id = ?`)
-        .run(f.title, f.text, f.visibility, becamePublic ? 1 : 0, f.visibility, c.id);
+        .run(f.title, f.text, f.intro, f.visibility, f.fundingGoal, f.fundingNote, becamePublic ? 1 : 0, f.visibility, c.id);
       db.exec('COMMIT');
       del.forEach((a) => removeFile(a.stored_name));
       res.json({ content: hydrate([db.prepare('SELECT * FROM contents WHERE id = ?').get(c.id)], req.user)[0] });
@@ -487,6 +517,34 @@ export function createApp(opts = {}) {
     const c = likeTarget(req);
     db.prepare('DELETE FROM likes WHERE user_id = ? AND content_id = ?').run(req.user.id, c.id);
     res.json(likeState(c, req.user));
+  }));
+
+  // ---------- 굿즈 펀딩(관심 표시) ----------
+  // 좋아요와 다른 기능이다. 결제·후원 약속이 아니라 "제작되면 좋겠다"는 의사 표시이며, 목표에 모이면 제작사 연결을 검토하는 3차 기능의 사전 단계다.
+  const interestTarget = (req) => {
+    const c = db.prepare('SELECT * FROM contents WHERE id = ?').get(req.params.id);
+    if (!c || c.kind !== 'goods' || c.visibility !== 'public' || c.hidden) throw err(404, '공개된 굿즈 기획이 아닙니다.');
+    return c;
+  };
+  const interestState = (c, u) => hydrate([c], u)[0].funding;
+  app.put('/api/contents/:id/interest', requireUser, wrap((req, res) => {
+    const c = interestTarget(req);
+    if (c.user_id === req.user.id) throw err(400, '내 기획에는 관심 표시를 할 수 없습니다.');
+    db.prepare('INSERT OR IGNORE INTO interests (user_id, content_id) VALUES (?,?)').run(req.user.id, c.id);
+    res.json({ funding: interestState(c, req.user) });
+  }));
+  app.delete('/api/contents/:id/interest', requireUser, wrap((req, res) => {
+    const c = interestTarget(req);
+    db.prepare('DELETE FROM interests WHERE user_id = ? AND content_id = ?').run(req.user.id, c.id);
+    res.json({ funding: interestState(c, req.user) });
+  }));
+  app.get('/api/funding', requireUser, wrap((req, res) => {
+    const sort = ['progress', 'latest', 'popular'].includes(req.query.sort) ? req.query.sort : 'progress'; const offset = Math.max(0, parseInt(req.query.offset) || 0);
+    const order = { progress: 'ratio DESC, n DESC, id DESC', popular: 'n DESC, id DESC', latest: 'published_at DESC, id DESC' }[sort];
+    const rows = db.prepare(`SELECT * FROM (SELECT c.*, c.base_interest + (SELECT COUNT(*) FROM interests i WHERE i.content_id = c.id) n,
+      1.0 * (c.base_interest + (SELECT COUNT(*) FROM interests i WHERE i.content_id = c.id)) / MAX(1, c.funding_goal) ratio FROM contents c
+      WHERE ${isPublicVisible} AND c.kind = 'goods') ORDER BY ${order} LIMIT 24 OFFSET ?`).all(offset);
+    res.json({ contents: hydrate(rows, req.user), hasMore: rows.length === 24 });
   }));
 
   // ---------- 창작 전시관: 모든 책의 공개 2차 창작물 ----------

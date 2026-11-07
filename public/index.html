@@ -11,11 +11,17 @@
 </head>
 <body>
 <a class="skip" href="#main">본문으로 건너뛰기</a>
+<div id="stage" hidden></div>
 <header id="topbar" hidden>
   <a class="brand" href="#/home"><span class="brand-mark" aria-hidden="true"></span>BookRest</a>
   <nav id="nav" aria-label="주요 메뉴"></nav>
 </header>
 <main id="main" tabindex="-1"></main>
+<div id="winback" hidden></div>
+<section id="win" class="win" hidden aria-label="건물 창">
+  <div class="wintitle"><nav id="wintabs" aria-label="건물 탭"></nav><button type="button" id="winclose" class="btn small secondary" aria-label="창 닫고 마을로 (Esc)">× 닫기</button></div>
+  <div id="winbody" tabindex="-1"></div>
+</section>
 <div id="toast" role="status" aria-live="polite"></div>
 <dialog id="dialog"></dialog>
 <script type="module" src="/app.js"></script>

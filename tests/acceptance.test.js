@@ -108,7 +108,7 @@ test('5. 좋아요 토글/중복 방지/상위 3위(동점은 먼저 공개)', a
   const s = await setup();
   const a = await s.mk('작성자'); const u1 = await s.mk('독자1'); const u2 = await s.mk('독자2'); const u3 = await s.mk('독자3');
   const book = await seedBook(a);
-  const mkWork = async (title) => (await a.post('/api/contents', form({ bookId: book, kind: 'sidestory', title, body: '내용', visibility: 'public' }))).data.content;
+  const mkWork = async (title) => (await a.post('/api/contents', form({ bookId: book, kind: 'sidestory', title, intro: '소개', body: '내용', visibility: 'public' }))).data.content;
   const w1 = await mkWork('첫째'); const w2 = await mkWork('둘째'); const w3 = await mkWork('셋째'); const w4 = await mkWork('넷째'); await mkWork('무좋아요');
   // 서로 다른 시각으로 공개 순서 고정
   const db = s.app.locals.db;
@@ -180,9 +180,11 @@ test('SHELF-07 책장 제거 시 기록 처리 선택, 업로드 검증, 계정 
   assert.equal((await a.post('/api/contents', form({ bookId: 999999, kind: 'oneline', body: 'a' }))).status, 404);
   const w = (await a.post('/api/contents', form({ bookId: book, kind: 'fanart', title: '그림', visibility: 'public' }, [PNG]))).data.content;
 
-  // 이미지 수정/삭제
-  const upd = await a.put(`/api/contents/${w.id}`, form({ title: '그림2', removeAttachments: JSON.stringify([w.attachments[0].id]), body: '설명' }));
-  assert.equal(upd.data.content.attachments.length, 0);
+  // 이미지 수정: 이미지형은 한 장 이상 필요 → 유일한 이미지만 지우면 거절, 새 이미지로 바꾸는 건 허용
+  const only = await a.put(`/api/contents/${w.id}`, form({ title: '그림2', removeAttachments: JSON.stringify([w.attachments[0].id]) }));
+  assert.equal(only.status, 400); assert.equal(only.data.code, 'image_required');
+  const upd = await a.put(`/api/contents/${w.id}`, form({ title: '그림2', intro: '설명', removeAttachments: JSON.stringify([w.attachments[0].id]) }, [PNG]));
+  assert.equal(upd.data.content.attachments.length, 1, '기존 1장 삭제 + 새 1장 추가 = 1장');
 
   assert.equal((await a.del(`/api/shelf/${book}`)).status, 400, '선택 필수');
   await a.del(`/api/shelf/${book}?records=keep`);

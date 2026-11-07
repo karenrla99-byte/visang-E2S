@@ -44,7 +44,8 @@ server.close(); app.locals.close();
 const res = await build({ entryPoints: [P('public/standalone-entry.js')], bundle: true, minify: true, format: 'iife', target: 'es2020', write: false });
 let js = res.outputFiles[0].text;
 const plaza = dataUri(P('public/assets/village/plaza-map.jpg'), { maxW: 1280, q: 80 }); const hall = dataUri(P('public/assets/library-hall.jpg'), { maxW: 1280, q: 78 });
-js = js.replaceAll('/assets/village/plaza-map.jpg', plaza).replaceAll('/assets/library-hall.jpg', hall).replaceAll('</script', '<\\/script');
+const sprite = `data:image/png;base64,${fs.readFileSync(P('public/assets/avatar/character-walk.png')).toString('base64')}`;
+js = js.replaceAll('/assets/avatar/character-walk.png', sprite).replaceAll('/assets/village/plaza-map.jpg', plaza).replaceAll('/assets/library-hall.jpg', hall).replaceAll('</script', '<\\/script');
 const font = (f) => `data:font/woff2;base64,${fs.readFileSync(P('public/fonts', f)).toString('base64')}`;
 const css = fs.readFileSync(P('public/style.css'), 'utf8').replace('/fonts/Galmuri11.woff2', font('Galmuri11.woff2')).replace('/fonts/Galmuri11-Bold.woff2', font('Galmuri11-Bold.woff2'));
 

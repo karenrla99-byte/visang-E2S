@@ -37,11 +37,12 @@ export function avatarSvg(avatar = {}, face = 'down', px) {
 // public/assets/avatar/character-walk.png (4열×4행: 행 = 아래·왼쪽·오른쪽·위, 열 = 걷기 4프레임)이 있으면 코드 도트 대신 쓴다.
 // 상점 아이템은 같은 4×4 규격의 투명 PNG를 item-<아이템id>.png 로 두면 캐릭터 위에 겹쳐 그린다(없는 아이템은 겹치지 않는다).
 const SPR = { base: false, items: new Set() };
-const SPR_DIR = '/assets/avatar/';
-const probe = (name) => new Promise((res) => { const i = new Image(); i.onload = () => res(true); i.onerror = () => res(false); i.src = SPR_DIR + name; });
+const SPR_BASE = '/assets/avatar/character-walk.png'; // 전체 경로를 문자열로 둔다(단독 실행 빌드가 이 경로를 그림 데이터로 바꿔 넣는다)
+const itemUrl = (id) => `/assets/avatar/item-${id}.png`;
+const probe = (url) => new Promise((res) => { const i = new Image(); i.onload = () => res(true); i.onerror = () => res(false); i.src = url; });
 export async function loadSprites() {
-  SPR.base = await probe('character-walk.png');
-  SPR.items = new Set((await Promise.all(Object.keys(LOOK).map(async (id) => ((await probe(`item-${id}.png`)) ? id : null)))).filter(Boolean));
+  SPR.base = await probe(SPR_BASE);
+  SPR.items = new Set((await Promise.all(Object.keys(LOOK).map(async (id) => ((await probe(itemUrl(id))) ? id : null)))).filter(Boolean));
   return SPR.base;
 }
 export const hasSprites = () => SPR.base;
@@ -49,7 +50,7 @@ const ROW = { down: 0, left: 1, right: 2, up: 3 };
 /** 스프라이트가 있으면 겹친 이미지, 없으면 코드 도트 SVG를 돌려준다. */
 export function avatarHtml(avatar = {}, face = 'down') {
   if (!SPR.base) return avatarSvg(avatar, face);
-  const layer = (file) => `<i class="lay" style="background-image:url(${SPR_DIR}${file})"></i>`;
-  const items = [avatar.outfit, avatar.hat, avatar.accessory].filter((id) => id && SPR.items.has(id)).map((id) => layer(`item-${id}.png`));
-  return `<span class="spritebox" role="img" aria-label="내 캐릭터" style="--row:${ROW[face] ?? 0}">${layer('character-walk.png')}${items.join('')}</span>`;
+  const layer = (url) => `<i class="lay" style="background-image:url(${url})"></i>`;
+  const items = [avatar.outfit, avatar.hat, avatar.accessory].filter((id) => id && SPR.items.has(id)).map((id) => layer(itemUrl(id)));
+  return `<span class="spritebox" role="img" aria-label="내 캐릭터" style="--row:${ROW[face] ?? 0}">${layer(SPR_BASE)}${items.join('')}</span>`;
 }

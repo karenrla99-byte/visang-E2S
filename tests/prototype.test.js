@@ -51,7 +51,7 @@ test('창작 전시관: 공개 2차 창작물만, 분류 필터, 인기/최신 �
   const s = await setup();
   const a = await s.mk('작가'); const b = await s.mk('관람객');
   const book = await bookId(a, '듄'); await a.post('/api/shelf', { bookId: book });
-  const mk = async (kind, title, vis = 'public') => (await a.post('/api/contents', form({ bookId: book, kind, title, body: '내용', visibility: vis }))).data.content;
+  const IMG = ['fanart', 'cosplay', 'webtoon']; const mk = async (kind, title, vis = 'public') => (await a.post('/api/contents', form({ bookId: book, kind, title, intro: '소개', body: '내용', visibility: vis }, IMG.includes(kind) ? [PNG] : []))).data.content;
   const fan = await mk('fanart', '팬아트'); const goods = await mk('goods', '굿즈'); const side = await mk('sidestory', '외전'); await mk('webnovel', '웹소설');
   await mk('fanart', '비공개 그림', 'private'); await mk('review', '서평(2차 창작 아님)');
   const all = (await b.get('/api/gallery')).data.contents;
@@ -106,5 +106,105 @@ test('온보딩: 분야 미리 추천은 저장하지 않고, 완료할 때 책�
   const r = await a.patch('/api/me', { nickname: '신입', interests: ['철학'], bookIds: ids });
   assert.equal(r.data.bonus, 200);
   assert.equal((await a.get('/api/shelf')).data.books.length, 2);
+  await s.close();
+});
+
+test('굿즈 펀딩(관심 표시): 좋아요와 별개, 결제 없음, 본인·비굿즈·비공개 불가, 목표 검증', async () => {
+  const s = await setup();
+  const a = await s.mk('기획자'); const b = await s.mk('후원자'); const c = await s.mk('구경꾼');
+  const book = await bookId(a, '듄'); await a.post('/api/shelf', { bookId: book });
+  const goods = (await a.post('/api/contents', form({ bookId: book, kind: 'goods', title: '모래벌레 인형', intro: '기획', visibility: 'public', fundingGoal: '20', fundingNote: '인형 15,000원 예정' }))).data.content;
+  assert.deepEqual({ goal: goods.funding.goal, count: goods.funding.count, note: goods.funding.note, reached: goods.funding.reached }, { goal: 20, count: 0, note: '인형 15,000원 예정', reached: false });
+  const fan = (await a.post('/api/contents', form({ bookId: book, kind: 'fanart', title: '그림', visibility: 'public' }, [PNG]))).data.content;
+  assert.equal(fan.funding, null, '굿즈가 아니면 펀딩 정보 없음');
+
+  let r = await b.put(`/api/contents/${goods.id}/interest`);
+  assert.equal(r.status, 200); assert.equal(r.data.funding.count, 1); assert.equal(r.data.funding.interested, true);
+  assert.equal((await b.put(`/api/contents/${goods.id}/interest`)).data.funding.count, 1, '중복 관심 없음');
+  assert.equal((await c.put(`/api/contents/${goods.id}/interest`)).data.funding.count, 2);
+  assert.equal((await b.get(`/api/contents/${goods.id}`)).data.content.likes, 0, '관심 표시는 좋아요 수와 무관');
+  assert.equal((await a.put(`/api/contents/${goods.id}/interest`)).status, 400, '본인 기획 불가');
+  assert.equal((await b.put(`/api/contents/${fan.id}/interest`)).status, 404, '굿즈만 가능');
+  assert.equal((await b.del(`/api/contents/${goods.id}/interest`)).data.funding.count, 1);
+
+  const list = (await b.get('/api/funding')).data.contents;
+  assert.deepEqual(list.map((x) => x.id), [goods.id]);
+  await a.patch(`/api/contents/${goods.id}/visibility`, { visibility: 'private' });
+  assert.equal((await b.put(`/api/contents/${goods.id}/interest`)).status, 404, '비공개로 바꾸면 관심 표시 불가');
+  assert.equal((await b.get('/api/funding')).data.contents.length, 0);
+
+  assert.equal((await a.post('/api/contents', form({ bookId: book, kind: 'goods', title: 'x', intro: 'y', fundingGoal: '5' }))).status, 400, '목표 하한');
+  assert.equal((await a.post('/api/contents', form({ bookId: book, kind: 'goods', title: 'x', intro: 'y', fundingGoal: '99999' }))).status, 400, '목표 상한');
+  assert.equal((await a.post('/api/contents', form({ bookId: book, kind: 'goods', title: 'x', intro: 'y' }))).data.content.funding.goal, 50, '기본 목표 50');
+  await s.close();
+});
+
+test('굿즈 펀딩 정렬: 진행률순', async () => {
+  const s = await setup({ demo: true });
+  const a = await s.mk('방문자');
+  const list = (await a.get('/api/funding')).data.contents;
+  assert.ok(list.length >= 3 && list.every((c) => c.kind === 'goods' && c.funding.goal > 0));
+  const ratios = list.map((c) => c.funding.count / c.funding.goal);
+  assert.deepEqual(ratios, [...ratios].sort((x, y) => y - x), '진행률 높은 순');
+  await s.close();
+});
+
+test('대도서관: 종류마다 따로 탭(2차 창작을 합치지 않음)', async () => {
+  const s = await setup();
+  const a = await s.mk('작가'); const b = await s.mk('독자');
+  const book = await bookId(a, '듄'); await a.post('/api/shelf', { bookId: book });
+  const IMG = ['fanart', 'cosplay', 'webtoon']; const mk = (kind, title) => a.post('/api/contents', form({ bookId: book, kind, title, intro: '소개', body: '내용', visibility: 'public' }, IMG.includes(kind) ? [PNG] : []));
+  await mk('oneline', ''); await mk('review', '서평'); await mk('fanart', 'A'); await mk('fanart', 'B'); await mk('goods', 'G'); await mk('cosplay', 'C'); await mk('sidestory', 'S'); await mk('webnovel', 'W'); await mk('webtoon', 'T'); await mk('other', 'O');
+  const d = (await b.get(`/api/books/${book}`)).data;
+  assert.deepEqual({ ...d.counts }, { creative: 8, oneline: 1, review: 1, fanart: 2, goods: 1, cosplay: 1, sidestory: 1, webnovel: 1, webtoon: 1, other: 1 });
+  for (const [kind, n] of [['fanart', 2], ['goods', 1], ['cosplay', 1], ['sidestory', 1], ['webnovel', 1], ['webtoon', 1], ['other', 1], ['oneline', 1], ['review', 1]]) {
+    const r = (await b.get(`/api/books/${book}/contents?tab=${kind}`)).data.contents;
+    assert.equal(r.length, n, kind); assert.ok(r.every((c) => c.kind === kind), `${kind} 탭에는 ${kind}만`);
+  }
+  assert.equal((await b.get(`/api/books/${book}/contents?tab=creative`)).data.contents.length, 8, '합계 탭은 호환용으로 유지');
+  assert.equal((await b.get(`/api/books/${book}/contents?tab=evil'`)).data.contents.length, 1, '알 수 없는 탭은 한 줄 평으로');
+  await s.close();
+});
+
+test('작성 템플릿: 이미지형은 이미지 필수, 글형은 소개칸+내용칸 분리, 굿즈는 소개, 종류별 이미지 규칙', async () => {
+  const s = await setup();
+  const a = await s.mk('작가'); const book = await bookId(a, '듄'); await a.post('/api/shelf', { bookId: book });
+  const post = (fields, files) => a.post('/api/contents', form({ bookId: book, ...fields }, files));
+  const kinds = (await a.get('/api/categories')).data.kinds;
+  assert.deepEqual(Object.fromEntries(kinds.map((k) => [k.id, k.template])), { oneline: 'line', review: 'essay', fanart: 'image', goods: 'goods', cosplay: 'image', sidestory: 'story', webnovel: 'story', webtoon: 'image', other: 'mixed' });
+
+  // 이미지형(팬아트·코스프레·웹툰): 이미지 필수
+  for (const k of ['fanart', 'cosplay', 'webtoon']) {
+    const r = await post({ kind: k, title: 't', intro: '소개' }, []);
+    assert.equal(r.status, 400, `${k}: 이미지 없이는 저장 불가`); assert.equal(r.data.code, 'image_required');
+    const ok = await post({ kind: k, title: 't', intro: '소개' }, [PNG]);
+    assert.equal(ok.status, 201, k); assert.equal(ok.data.content.intro, '소개'); assert.equal(ok.data.content.template, 'image');
+  }
+  // 이미지 수 제한: 팬아트 4장, 웹툰 10장
+  assert.equal((await post({ kind: 'fanart', title: 't' }, Array(5).fill(PNG))).status, 400);
+  assert.equal((await post({ kind: 'fanart', title: 't' }, Array(4).fill(PNG))).status, 201);
+  assert.equal((await post({ kind: 'webtoon', title: 't' }, Array(10).fill(PNG))).status, 201, '웹툰은 컷이 많아 10장까지');
+  assert.equal((await post({ kind: 'webtoon', title: 't' }, Array(11).fill(PNG))).status, 400);
+
+  // 글형(외전·웹소설): 소개칸과 내용칸이 따로, 둘 다 필수, 이미지 없음
+  for (const k of ['sidestory', 'webnovel']) {
+    assert.match((await post({ kind: k, title: 't', body: '본문만' })).data.error, /소개/, `${k}: 소개 없으면 거절`);
+    assert.match((await post({ kind: k, title: 't', intro: '소개만' })).data.error, /내용/, `${k}: 내용 없으면 거절`);
+    assert.equal((await post({ kind: k, title: 't', intro: '소개', body: '본문' }, [PNG])).status, 400, `${k}: 글형에는 이미지 없음`);
+    const ok = await post({ kind: k, title: 't', intro: '짧은 소개', body: '긴 본문' });
+    assert.equal(ok.status, 201); assert.deepEqual([ok.data.content.intro, ok.data.content.body], ['짧은 소개', '긴 본문']);
+  }
+  assert.equal((await post({ kind: 'sidestory', title: 't', intro: 'x'.repeat(501), body: 'b' })).status, 400, '소개 500자 제한');
+
+  // 굿즈: 소개 필수, 이미지는 선택
+  assert.equal((await post({ kind: 'goods', title: 't' })).status, 400);
+  assert.equal((await post({ kind: 'goods', title: 't', intro: '소개' })).status, 201);
+  assert.equal((await post({ kind: 'goods', title: 't', intro: '소개' }, [PNG])).status, 201);
+  // 기타: 소개·내용·이미지 중 하나
+  assert.equal((await post({ kind: 'other', title: 't' })).status, 400);
+  assert.equal((await post({ kind: 'other', title: 't', intro: '소개' })).status, 201);
+  // 한 줄 평·서평은 내용 필수, 이미지 불가
+  assert.equal((await post({ kind: 'oneline', body: '' })).status, 400);
+  assert.equal((await post({ kind: 'review', title: 't', body: '서평' }, [PNG])).status, 400);
   await s.close();
 });

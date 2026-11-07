@@ -2,7 +2,9 @@
 // 서버(server/app.js)의 규칙을 같은 모양으로 옮긴 것이다. 데이터는 브라우저 localStorage에 저장되고, 사이트 데이터를 지우면 처음 상태로 돌아간다.
 // 빌드(scripts/build-standalone.mjs)가 window.__SEED__ 에 DB 덤프를 넣어 준다.
 const SEED = window.__SEED__;
-const KEY = 'bookrest-standalone-v1';
+const KEY = 'bookrest-standalone-v2'; // 저장 형식이 바뀌면 숫자를 올려 이전 저장본을 버린다
+const FUNDING = { min: 10, max: 1000, def: 50, noteMax: 200 };
+const IMAGE_TEMPLATES = ['image', 'goods', 'mixed'];
 const REWARDS = { onboarding: 200, shelf: 50, oneline: 30, review: 70, creative: 120 };
 const GALLERY_GROUPS = { fanart: ['fanart'], goods: ['goods'], spinoff: ['sidestory', 'webnovel'], webtoon: ['webtoon'], etc: ['cosplay', 'other'] };
 const DEFAULT_AVATAR = { skin: '#FBD3AC', outfit: 'outfit_cardigan' };
@@ -11,8 +13,8 @@ const SHOP = SEED.shop;
 const KIND = Object.fromEntries(KINDS.map((k) => [k.id, k]));
 const CREATIVE = KINDS.filter((k) => k.creative).map((k) => k.id);
 
-const load = () => { try { const s = JSON.parse(localStorage.getItem(KEY)); if (s?.v === 1) return s; } catch { /* 저장소 없음 */ } return null; };
-const S = load() || { v: 1, ...structuredClone(SEED.db), likes: [], reports: [], notices: [], log: [], meId: null, next: { user: 1000, content: 1000, att: 1000, report: 1, notice: 1 } };
+const load = () => { try { const s = JSON.parse(localStorage.getItem(KEY)); if (s?.v === 2) return s; } catch { /* 저장소 없음 */ } return null; };
+const S = load() || { v: 2, ...structuredClone(SEED.db), likes: [], interests: [], reports: [], notices: [], log: [], meId: null, next: { user: 1000, content: 1000, att: 1000, report: 1, notice: 1 } };
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch { /* 용량 초과 시 이번 변경은 새로고침하면 사라진다 */ } };
 const now = () => new Date().toISOString().slice(0, 19).replace('T', ' ');
 
@@ -30,14 +32,19 @@ const canView = (c, u) => c && (u?.id === c.user_id || u?.role === 'admin' || vi
 const likesOf = (c) => c.base_likes + S.likes.filter((l) => l.content_id === c.id).length;
 const inShelf = (u, b) => S.shelf.some((s) => s.user_id === u.id && s.book_id === Number(b));
 
+const interestCount = (c) => (c.base_interest || 0) + S.interests.filter((i) => i.content_id === c.id).length;
+function funding(c, viewer) {
+  if (c.kind !== 'goods') return null; const goal = c.funding_goal || FUNDING.def; const count = interestCount(c);
+  return { goal, count, reached: count >= goal, note: c.funding_note || '', interested: !!viewer && S.interests.some((i) => i.content_id === c.id && i.user_id === viewer.id) };
+}
 function hydrate(c, viewer) {
   const au = user(c.user_id);
   return {
     id: c.id, book_id: c.book_id, kind: c.kind, kind_label: KIND[c.kind]?.label, creative: !!KIND[c.kind]?.creative, title: c.title, body: c.body,
-    visibility: c.visibility, hidden: !!c.hidden, created_at: c.created_at, published_at: c.published_at, book_title: book(c.book_id)?.title,
+    intro: c.intro || '', template: KIND[c.kind]?.template, visibility: c.visibility, hidden: !!c.hidden, created_at: c.created_at, published_at: c.published_at, book_title: book(c.book_id)?.title,
     attachments: S.attachments.filter((a) => a.content_id === c.id).map((a) => ({ id: a.id, alt: a.alt, url: a.url })),
     likes: likesOf(c), liked: !!viewer && S.likes.some((l) => l.content_id === c.id && l.user_id === viewer.id),
-    author: au && { id: au.id, nickname: au.nickname, avatar: au.avatar }, mine: viewer?.id === c.user_id,
+    author: au && { id: au.id, nickname: au.nickname, avatar: au.avatar }, mine: viewer?.id === c.user_id, funding: funding(c, viewer),
   };
 }
 const bySort = (arr, sort) => arr.sort((a, b) => (sort === 'likes' ? likesOf(b) - likesOf(a) || (a.published_at || '').localeCompare(b.published_at || '') : (b.published_at || '').localeCompare(a.published_at || '') || b.id - a.id));
@@ -52,7 +59,7 @@ async function pickImages(fd) {
     if (!/^image\/(png|jpe?g|webp|gif)$/.test(f.type)) throw err(400, 'PNG, JPG, WEBP, GIF 이미지만 올릴 수 있습니다.', 'bad_image');
     out.push(await readFile(f));
   }
-  if (out.length > LIMITS.maxImages) throw err(400, `이미지는 최대 ${LIMITS.maxImages}장까지 올릴 수 있습니다.`, 'too_many_files');
+  if (out.length > LIMITS.maxImagesWebtoon) throw err(400, `이미지는 최대 ${LIMITS.maxImagesWebtoon}장까지 올릴 수 있습니다.`, 'too_many_files');
   return out;
 }
 function fields(body, existing) {
@@ -65,11 +72,32 @@ function fields(body, existing) {
   const max = kind === 'oneline' ? LIMITS.onelineMax : LIMITS.bodyMax;
   if (text.length > max) throw err(400, `본문은 ${max}자 이하로 입력해 주세요.`);
   if (kind !== 'oneline' && !title) throw err(400, '제목을 입력해 주세요.');
-  return { kind, title, text, visibility };
+  const intro = String(body.intro ?? existing?.intro ?? '').trim(); const tpl = KIND[kind].template;
+  if (intro.length > LIMITS.introMax) throw err(400, `소개는 ${LIMITS.introMax}자 이하로 입력해 주세요.`);
+  if (tpl === 'story' && !intro) throw err(400, '소개를 입력해 주세요. (작품을 짧게 소개하는 글이에요)');
+  if (tpl === 'story' && !text) throw err(400, '내용을 입력해 주세요.');
+  if (tpl === 'goods' && !intro) throw err(400, '기획 소개를 입력해 주세요.');
+  if ((tpl === 'line' || tpl === 'essay') && !text) throw err(400, '내용을 입력해 주세요.');
+  let fundingGoal = 0; let fundingNote = '';
+  if (kind === 'goods') {
+    fundingGoal = body.fundingGoal !== undefined && body.fundingGoal !== '' ? Math.round(Number(body.fundingGoal)) : existing?.funding_goal || FUNDING.def;
+    if (!Number.isFinite(fundingGoal) || fundingGoal < FUNDING.min || fundingGoal > FUNDING.max) throw err(400, `목표 관심 수는 ${FUNDING.min}~${FUNDING.max} 사이로 입력해 주세요.`);
+    fundingNote = String(body.fundingNote ?? existing?.funding_note ?? '').trim();
+    if (fundingNote.length > FUNDING.noteMax) throw err(400, `제작 구상은 ${FUNDING.noteMax}자 이하로 입력해 주세요.`);
+  }
+  return { kind, title, text, intro, visibility, fundingGoal, fundingNote };
+}
+/** 종류별 이미지 규칙. count = 저장 후 총 이미지 수 */
+function checkImages(f, count) {
+  const tpl = KIND[f.kind].template; const max = f.kind === 'webtoon' ? LIMITS.maxImagesWebtoon : LIMITS.maxImages;
+  if (count && !IMAGE_TEMPLATES.includes(tpl)) throw err(400, '이 종류에는 이미지를 첨부할 수 없습니다.');
+  if (count > max) throw err(400, `이미지는 최대 ${max}장까지 올릴 수 있습니다.`, 'too_many_files');
+  if (tpl === 'image' && !count) throw err(400, '이미지를 한 장 이상 올려 주세요.', 'image_required');
+  if (tpl === 'mixed' && !count && !f.text && !f.intro) throw err(400, '소개, 내용, 이미지 중 하나는 입력해 주세요.');
 }
 const alts = (b) => { try { return JSON.parse(b.alts || '[]'); } catch { return []; } };
 const addAtts = (c, imgs, al) => imgs.forEach((url, i) => S.attachments.push({ id: S.next.att++, content_id: c.id, url, alt: String(al[i] || '').slice(0, 200) }));
-const dropContent = (id) => { S.contents = S.contents.filter((c) => c.id !== id); S.attachments = S.attachments.filter((a) => a.content_id !== id); S.likes = S.likes.filter((l) => l.content_id !== id); };
+const dropContent = (id) => { S.contents = S.contents.filter((c) => c.id !== id); S.attachments = S.attachments.filter((a) => a.content_id !== id); S.likes = S.likes.filter((l) => l.content_id !== id); S.interests = S.interests.filter((i) => i.content_id !== id); };
 
 // ---------- 라우터 ----------
 const routes = [];
@@ -96,7 +124,7 @@ route('PATCH', '/api/me', ({ body }) => {
 });
 route('DELETE', '/api/me', () => {
   const u = need(); S.contents.filter((c) => c.user_id === u.id).forEach((c) => dropContent(c.id));
-  S.shelf = S.shelf.filter((s) => s.user_id !== u.id); S.likes = S.likes.filter((l) => l.user_id !== u.id); S.users = S.users.filter((x) => x.id !== u.id); S.meId = null; save();
+  S.shelf = S.shelf.filter((s) => s.user_id !== u.id); S.likes = S.likes.filter((l) => l.user_id !== u.id); S.interests = S.interests.filter((i) => i.user_id !== u.id); S.users = S.users.filter((x) => x.id !== u.id); S.meId = null; save();
   return { ok: true, message: '계정과 모든 기록이 삭제되었습니다.' };
 });
 route('GET', '/api/me/notices', () => { const u = need(); const n = S.notices.filter((x) => x.user_id === u.id).reverse(); S.notices.forEach((x) => { if (x.user_id === u.id) x.read = 1; }); save(); return { notices: n }; });
@@ -131,11 +159,11 @@ route('GET', '/api/books/:id', ({ params }) => {
   const u = need(); const b = book(params.id); if (!b) throw err(404, '책을 찾을 수 없습니다.');
   const pubs = S.contents.filter((c) => c.book_id === b.id && visible(c));
   const top = pubs.filter((c) => CREATIVE.includes(c.kind) && likesOf(c) >= 1).sort((x, y) => likesOf(y) - likesOf(x) || (x.published_at || '').localeCompare(y.published_at || '') || x.id - y.id).slice(0, 3);
-  const counts = { oneline: pubs.filter((c) => c.kind === 'oneline').length, review: pubs.filter((c) => c.kind === 'review').length, creative: pubs.filter((c) => CREATIVE.includes(c.kind)).length };
+  const counts = { creative: pubs.filter((c) => CREATIVE.includes(c.kind)).length }; for (const k of Object.keys(KIND)) counts[k] = pubs.filter((c) => c.kind === k).length; // 종류마다 따로 센다
   return { book: b, inShelf: inShelf(u, b.id), top: top.map((c) => hydrate(c, u)), counts };
 });
 route('GET', '/api/books/:id/contents', ({ params, query }) => {
-  const u = need(); const tab = ['oneline', 'review', 'creative'].includes(query.tab) ? query.tab : 'oneline'; const offset = Math.max(0, parseInt(query.offset) || 0);
+  const u = need(); const tab = query.tab === 'creative' || KIND[query.tab] ? query.tab : 'oneline'; const offset = Math.max(0, parseInt(query.offset) || 0);
   const rows = bySort(S.contents.filter((c) => c.book_id === Number(params.id) && visible(c) && (tab === 'creative' ? CREATIVE.includes(c.kind) : c.kind === tab)), query.sort === 'likes' ? 'likes' : 'latest').slice(offset, offset + 20);
   return { contents: rows.map((c) => hydrate(c, u)), hasMore: rows.length === 20 };
 });
@@ -172,10 +200,8 @@ route('GET', '/api/me/books/:bookId/contents', ({ params }) => {
 route('POST', '/api/contents', async ({ body, form }) => {
   const u = need(); const b = book(body.bookId); if (!b) throw err(404, '책을 찾을 수 없습니다.');
   if (!inShelf(u, b.id)) throw err(400, '먼저 책을 내 책장에 추가해 주세요.');
-  const f = fields(body); const imgs = await pickImages(form);
-  if (!f.text && !imgs.length) throw err(400, '본문 또는 이미지를 입력해 주세요.');
-  if (imgs.length && !KIND[f.kind].creative) throw err(400, '이 종류에는 이미지를 첨부할 수 없습니다.');
-  const c = { id: S.next.content++, user_id: u.id, book_id: b.id, kind: f.kind, title: f.title, body: f.text, visibility: f.visibility, hidden: 0, created_at: now(), updated_at: now(), published_at: f.visibility === 'public' ? now() : null, base_likes: 0 };
+  const f = fields(body); const imgs = await pickImages(form); checkImages(f, imgs.length);
+  const c = { id: S.next.content++, user_id: u.id, book_id: b.id, kind: f.kind, title: f.title, body: f.text, intro: f.intro, visibility: f.visibility, hidden: 0, created_at: now(), updated_at: now(), published_at: f.visibility === 'public' ? now() : null, base_likes: 0, funding_goal: f.fundingGoal, funding_note: f.fundingNote, base_interest: 0 };
   S.contents.push(c); addAtts(c, imgs, alts(body));
   const points = award(u, 'content', c.id, KIND[f.kind].creative ? REWARDS.creative : REWARDS[f.kind]); save();
   return { content: hydrate(c, u), points, _status: 201 };
@@ -186,12 +212,10 @@ route('PUT', '/api/contents/:id', async ({ params, body, form }) => {
   const f = fields({ ...body, kind: c.kind }, c); const imgs = await pickImages(form);
   let remove = []; try { remove = JSON.parse(body.removeAttachments || '[]').map(Number); } catch { /* 무시 */ }
   const left = S.attachments.filter((a) => a.content_id === c.id && !remove.includes(a.id)).length;
-  if (left + imgs.length > LIMITS.maxImages) throw err(400, `이미지는 최대 ${LIMITS.maxImages}장까지 올릴 수 있습니다.`, 'too_many_files');
-  if (imgs.length && !KIND[c.kind].creative) throw err(400, '이 종류에는 이미지를 첨부할 수 없습니다.');
-  if (!f.text && !left && !imgs.length) throw err(400, '내용을 입력해 주세요.');
+  checkImages(f, left + imgs.length);
   S.attachments = S.attachments.filter((a) => !(a.content_id === c.id && remove.includes(a.id))); addAtts(c, imgs, alts(body));
   const becamePublic = f.visibility === 'public' && c.visibility !== 'public';
-  Object.assign(c, { title: f.title, body: f.text, visibility: f.visibility, updated_at: now(), published_at: becamePublic ? now() : f.visibility === 'private' ? null : c.published_at }); save();
+  Object.assign(c, { title: f.title, body: f.text, intro: f.intro, funding_goal: f.fundingGoal, funding_note: f.fundingNote, visibility: f.visibility, updated_at: now(), published_at: becamePublic ? now() : f.visibility === 'private' ? null : c.published_at }); save();
   return { content: hydrate(c, u) };
 });
 route('PATCH', '/api/contents/:id/visibility', ({ params, body }) => {
@@ -212,6 +236,18 @@ route('PUT', '/api/contents/:id/like', ({ params }) => {
 });
 route('DELETE', '/api/contents/:id/like', ({ params }) => { const u = need(); const c = likeTarget(params.id); S.likes = S.likes.filter((l) => !(l.content_id === c.id && l.user_id === u.id)); save(); return likeState(c, u); });
 
+const interestTarget = (id) => { const c = S.contents.find((x) => x.id === Number(id)); if (!c || c.kind !== 'goods' || !visible(c)) throw err(404, '공개된 굿즈 기획이 아닙니다.'); return c; };
+route('PUT', '/api/contents/:id/interest', ({ params }) => {
+  const u = need(); const c = interestTarget(params.id); if (c.user_id === u.id) throw err(400, '내 기획에는 관심 표시를 할 수 없습니다.');
+  if (!S.interests.some((i) => i.content_id === c.id && i.user_id === u.id)) S.interests.push({ content_id: c.id, user_id: u.id }); save(); return { funding: funding(c, u) };
+});
+route('DELETE', '/api/contents/:id/interest', ({ params }) => { const u = need(); const c = interestTarget(params.id); S.interests = S.interests.filter((i) => !(i.content_id === c.id && i.user_id === u.id)); save(); return { funding: funding(c, u) }; });
+route('GET', '/api/funding', ({ query }) => {
+  const u = need(); const sort = ['progress', 'latest', 'popular'].includes(query.sort) ? query.sort : 'progress'; const offset = Math.max(0, parseInt(query.offset) || 0);
+  const ratio = (c) => interestCount(c) / Math.max(1, c.funding_goal || FUNDING.def);
+  const rows = S.contents.filter((c) => visible(c) && c.kind === 'goods').sort({ progress: (a, b) => ratio(b) - ratio(a) || interestCount(b) - interestCount(a) || b.id - a.id, popular: (a, b) => interestCount(b) - interestCount(a) || b.id - a.id, latest: (a, b) => (b.published_at || '').localeCompare(a.published_at || '') || b.id - a.id }[sort]);
+  const page = rows.slice(offset, offset + 24); return { contents: page.map((c) => hydrate(c, u)), hasMore: page.length === 24 };
+});
 route('GET', '/api/gallery', ({ query }) => {
   const u = need(); const kinds = GALLERY_GROUPS[query.category] || CREATIVE; const offset = Math.max(0, parseInt(query.offset) || 0);
   const rows = S.contents.filter((c) => visible(c) && kinds.includes(c.kind));

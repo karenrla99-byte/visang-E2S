@@ -77,6 +77,14 @@ export function seedBooks(db) {
   }
 }
 
+// 굿즈 기획 데모의 펀딩 관심 현황 (결제 없는 "관심 표시" 모델)
+const FUNDING = {
+  rec_prince_01: { goal: 100, interest: 61, note: '금속 뱃지 3,900원 · 우드 책갈피 2,500원 예정. 100명이 관심을 보이면 제작사 문의를 시작해요.' },
+  rec_cosmos_01: { goal: 80, interest: 53, note: '홀로그램 엽서 세트 4,500원 · 코스터 3,000원 예정. 목표 달성 시 소량 시제품부터 검토해요.' },
+};
+// 데모 전용 추가 굿즈 기획(실제 사용자 글이 아님)
+const EXTRA_GOODS = { user: 'user_stellar', book: 'book_demian', title: '아브락사스 알 모양 무드등 기획서', body: '“새는 알에서 나오려고 투쟁한다.” 구절을 모티프로, 반쯤 깨진 알 안에서 따뜻한 빛이 새어 나오는 탁상 무드등을 기획했어요. 소재는 반투명 레진, 크기 12cm, 밤에 책을 읽을 때 켜 두는 용도예요.', likes: 12, goal: 120, interest: 27, note: '무드등 예상 18,000원 · 한정 수량. 목표 달성 시 제작사 견적부터 받아 볼게요.' };
+
 const KIND_OF = { fanart: 'fanart', goods: 'goods', spinoff: 'sidestory', webtoon: 'webtoon', etc: 'other' };
 
 /** 미리보기용 데모 데이터: 다른 독자 3명과 그들의 공개 기록(팬아트·서평·한 줄 평). DB가 비어 있을 때만 넣는다. */
@@ -92,13 +100,13 @@ export function seedDemo(db, uploadDir) {
         .run(u.id, u.nickname, JSON.stringify(u.interestedCategories), u.points, JSON.stringify(u.inventory), JSON.stringify(u.avatar), u.bio).lastInsertRowid;
       for (const b of u.interestedBookIds) { const id = bookId(b); if (id) db.prepare('INSERT OR IGNORE INTO shelf (user_id, book_id) VALUES (?,?)').run(uid[u.id], id); }
     }
-    const insC = db.prepare(`INSERT INTO contents (user_id, book_id, kind, title, body, visibility, created_at, updated_at, published_at, base_likes) VALUES (?,?,?,?,?,?,?,?,?,?)`);
+    const insC = db.prepare(`INSERT INTO contents (user_id, book_id, kind, title, body, visibility, created_at, updated_at, published_at, base_likes, funding_goal, funding_note, base_interest) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`);
     const insA = db.prepare('INSERT INTO attachments (content_id, stored_name, mime, size, alt, external_url) VALUES (?,?,?,?,?,?)');
     for (const r of demo.INITIAL_RECORDS) {
       const u = uid[r.userId]; const b = bookId(r.bookId); if (!u || !b) continue;
       const kind = r.type === 'creation' ? KIND_OF[r.creationCategory] || 'other' : r.type === 'review' ? 'review' : 'oneline';
       const at = r.createdAt.replace('T', ' ').replace('Z', '');
-      const id = insC.run(u, b, kind, r.title || '', r.content || '', r.isPublic ? 'public' : 'private', at, at, r.isPublic ? at : null, r.likesCount || 0).lastInsertRowid;
+      const id = insC.run(u, b, kind, r.title || '', r.content || '', r.isPublic ? 'public' : 'private', at, at, r.isPublic ? at : null, r.likesCount || 0, FUNDING[r.id]?.goal || 0, FUNDING[r.id]?.note || '', FUNDING[r.id]?.interest || 0).lastInsertRowid;
       if (r.imageUrl) {
         if (r.imageUrl.startsWith('http')) insA.run(id, '', 'image/jpeg', 0, r.title, r.imageUrl);
         else { // 번들된 데모 이미지를 업로드 폴더로 복사
@@ -107,6 +115,8 @@ export function seedDemo(db, uploadDir) {
         }
       }
     }
+    const eg = EXTRA_GOODS; const gu = uid[eg.user]; const gb = bookId(eg.book);
+    if (gu && gb) { const at = '2026-10-28 10:00:00'; insC.run(gu, gb, 'goods', eg.title, eg.body, 'public', at, at, at, eg.likes, eg.goal, eg.note, eg.interest); }
     db.exec('COMMIT');
   } catch (e) { db.exec('ROLLBACK'); throw e; }
 }
