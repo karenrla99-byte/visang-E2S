@@ -64,11 +64,6 @@ dialog::backdrop { background: rgba(0,0,0,.5); }
 .liked { background: var(--danger); color: #fff; }
 
 /* 픽셀 마을 */
-.village-wrap { border: 3px solid var(--ink); box-shadow: var(--shadow); background: #8bc16a; overflow: hidden; }
-.village { display: block; width: 100%; height: auto; image-rendering: pixelated; shape-rendering: crispEdges; }
-.village .bld { cursor: pointer; } .village .bld:hover, .village .bld:focus { filter: brightness(1.12); outline: none; }
-.village .bld:focus-visible .sign, .village .bld:focus .sign { stroke: #2f6fdd; stroke-width: 2px; }
-.village text { font-family: var(--pixel); font-weight: 700; paint-order: stroke; stroke: #3a2a1f; stroke-width: 2px; fill: #fff; }
 .menu-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 16px; }
 .menu-list a, .menu-list button { display: flex; gap: 10px; align-items: center; padding: 12px; background: var(--paper); border: 2px solid var(--ink); box-shadow: var(--shadow); text-decoration: none; color: var(--ink); font: inherit; text-align: left; cursor: pointer; min-height: 56px; }
 .menu-list .ic { width: 28px; height: 28px; flex: none; image-rendering: pixelated; }
@@ -80,3 +75,31 @@ dialog::backdrop { background: rgba(0,0,0,.5); }
   .work { flex-direction: column; } .work .thumb { width: 100%; height: 180px; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* 걸어 다니는 마을 */
+.vcam { position: relative; height: clamp(300px, 56vh, 520px); overflow: hidden; border: 3px solid #0f1b4d; box-shadow: var(--shadow); background: #7ec8f8; touch-action: pan-y; cursor: pointer; }
+.vworld { position: absolute; left: 0; top: 0; transform-origin: 0 0; image-rendering: pixelated; will-change: transform; }
+.vworld img, .vworld svg { image-rendering: pixelated; display: block; user-select: none; -webkit-user-drag: none; }
+.vbg { position: absolute; inset: 0 0 auto 0; } .vbg img { object-fit: fill; }
+.vground { position: absolute; left: 0; width: 100%; } .vground svg { width: 100%; height: 100%; }
+.vb { position: absolute; background: none; border: 0; padding: 0; cursor: pointer; font: inherit; color: inherit; transition: filter .12s; }
+.vb:hover, .vb:focus-visible { filter: brightness(1.1) drop-shadow(0 0 0 #fff); }
+.vb:focus-visible { outline: 4px solid #2f6fdd; outline-offset: 4px; }
+.vb.soon > img, .vb.soon > svg { filter: grayscale(.45) brightness(.95); }
+.vsign { position: absolute; left: 50%; bottom: -34px; transform: translateX(-50%); white-space: nowrap; background: #5a3a1e; color: #fff; border: 4px solid #0f1b4d; padding: 2px 14px; font-size: 24px; line-height: 1.3; }
+.vtag { position: absolute; left: 50%; top: -34px; transform: translateX(-50%); background: #fffaf0; color: #0f1b4d; border: 3px solid #0f1b4d; padding: 0 10px; font-size: 18px; font-weight: 700; white-space: nowrap; }
+.vprompt { position: absolute; left: 50%; top: -46px; transform: translateX(-50%); background: #0f1b4d; color: #fff; font-size: 20px; padding: 2px 12px; white-space: nowrap; display: none; animation: vbob .8s steps(2) infinite; }
+.vb.near .vprompt { display: block; } .vb.soon.near .vtag { display: none; }
+.vactor { position: absolute; left: 0; pointer-events: none; will-change: transform; }
+.vspr.real { background-repeat: no-repeat; background-position: 0 0; image-rendering: pixelated; }
+.vplayer.walking .vspr.real { animation: vwalk .8s steps(8) infinite; }
+.vplayer.walking .vspr.fake, .vdog.walking { animation: vhop .28s steps(2) infinite; }
+.vspr.fake svg, .vdog svg { filter: drop-shadow(3px 0 0 #0f1b4d) drop-shadow(-3px 0 0 #0f1b4d) drop-shadow(0 3px 0 #0f1b4d) drop-shadow(0 -3px 0 #0f1b4d); }
+.vidle { position: absolute; inset: 0; display: none; } .vplayer:not(.walking) .vidle { display: block; } .vplayer.has-idle:not(.walking) .vspr.real { visibility: hidden; }
+.vhint { position: absolute; left: 8px; bottom: 6px; background: #fffaf0cc; color: #0f1b4d; border: 2px solid #0f1b4d; font-size: .8rem; padding: 0 8px; }
+@keyframes vwalk { to { background-position-x: calc(var(--sw) * -1); } }
+@keyframes vhop { 50% { margin-bottom: 6px; } }
+@keyframes vbob { 50% { margin-top: -4px; } }
+@media (prefers-reduced-motion: reduce) { .vplayer.walking .vspr, .vdog.walking, .vprompt { animation: none !important; } }
+@media (hover: none) { .vhint { display: none; } }
+.village-wrap { min-height: 120px; }

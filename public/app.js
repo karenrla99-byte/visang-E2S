@@ -82,33 +82,7 @@ function renderNav() {
     state.me.role === 'admin' ? link('#/admin', '운영') : ''].join('');
 }
 
-// ---------- 픽셀 마을 ----------
-function village() {
-  const R = (x, y, w, hh, c) => `<rect x="${x}" y="${y}" width="${w}" height="${hh}" fill="${c}"/>`;
-  const tree = (x, y) => R(x + 3, y + 12, 4, 8, '#7a4b25') + R(x, y + 4, 10, 10, '#2f7a3f') + R(x + 2, y, 6, 6, '#3d9650');
-  const flower = (x, y, c) => R(x, y, 2, 2, c) + R(x + 1, y + 2, 1, 3, '#2f7a3f');
-  const building = ({ x, y, w, hh, wall, roof, label, go, soon, aria, door = '#6b3f1f' }) => {
-    const roofRows = [0, 1, 2, 3].map((i) => R(x - 4 + i * 3, y - 16 + i * 4, w + 8 - i * 6, 4, roof)).join('');
-    const body = R(x, y, w, hh, wall) + R(x, y + hh - 3, w, 3, '#00000022') + R(x + w / 2 - 6, y + hh - 18, 12, 18, door) + R(x + w / 2 + 3, y + hh - 10, 2, 2, '#f2c14e')
-      + R(x + 6, y + 8, 10, 10, '#a9d8ee') + R(x + w - 16, y + 8, 10, 10, '#a9d8ee');
-    return `<g class="bld" role="link" tabindex="0" aria-label="${aria}" ${go ? `data-go="${go}"` : `data-soon="${soon}"`}>
-      ${roofRows}${body}${soon ? R(x, y, w, hh, '#ffffff55') : ''}
-      <g class="sign">${R(x + 2, y + hh + 3, w - 4, 11, '#3a2a1f')}<text x="${x + w / 2}" y="${y + hh + 12}" font-size="8" text-anchor="middle">${label}</text></g>${soon ? `<text x="${x + w / 2}" y="${y - 20}" font-size="7" text-anchor="middle">준비 중</text>` : ''}</g>`;
-  };
-  return h`<div class="village-wrap"><svg class="village" viewBox="0 0 320 232" role="group" aria-label="픽셀 마을 지도. 건물을 선택하면 이동합니다. 아래 메뉴 목록으로도 이동할 수 있습니다.">
-    <rect width="320" height="232" fill="#8bc16a"/><rect width="320" height="52" fill="#bfe3f0"/>
-    <g fill="#fff"><rect x="30" y="12" width="28" height="6"/><rect x="38" y="8" width="14" height="6"/><rect x="220" y="20" width="34" height="6"/><rect x="230" y="16" width="16" height="6"/></g>
-    <rect y="46" width="320" height="8" fill="#6aa653"/>
-    <rect x="0" y="138" width="320" height="14" fill="#e3c88f"/><rect x="148" y="100" width="24" height="40" fill="#e3c88f"/>
-    ${tree(8, 60)}${tree(296, 64)}${tree(6, 196)}${tree(304, 200)}${flower(100, 160, '#e85d75')}${flower(108, 166, '#f2c14e')}${flower(214, 162, '#fff')}${flower(222, 168, '#e85d75')}
-    ${new Raw(building({ x: 112, y: 62, w: 96, hh: 44, wall: '#e9d3a4', roof: '#b5653a', label: '대도서관', go: '#/library', aria: '대도서관으로 이동' }))}
-    ${new Raw(building({ x: 28, y: 88, w: 56, hh: 34, wall: '#f0c9a0', roof: '#4f8a5b', label: '내 서재', go: '#/shelf', aria: '내 서재로 이동' }))}
-    ${new Raw(building({ x: 236, y: 88, w: 56, hh: 34, wall: '#c9d6ea', roof: '#7a6ab5', label: '미술관', soon: '미술관', aria: '미술관, 준비 중' }))}
-    ${new Raw(building({ x: 32, y: 180, w: 56, hh: 30, wall: '#e8d9f0', roof: '#c06c9a', label: '글 작업실', soon: '글 작업실', aria: '글 작업실, 준비 중' }))}
-    ${new Raw(building({ x: 132, y: 180, w: 56, hh: 30, wall: '#d9ecd9', roof: '#3f8f8f', label: '웹툰 공간', soon: '웹툰 공간', aria: '웹툰 공간, 준비 중' }))}
-    ${new Raw(building({ x: 232, y: 180, w: 56, hh: 30, wall: '#f5e0b8', roof: '#c9a02e', label: '굿즈 상점', soon: '굿즈 상점', aria: '굿즈 상점, 준비 중' }))}
-  </svg></div>`;
-}
+import { mountVillage } from '/village.js';
 
 const SOON = [['미술관', '팬아트를 전시하는 공간'], ['글 작업실', '외전·웹소설을 쓰는 공간'], ['웹툰 공간', '연재 작품을 모으는 공간'], ['굿즈 상점', '굿즈 기획과 관심 표현']];
 
@@ -161,13 +135,15 @@ views.onboarding = async () => {
 };
 
 views.home = async () => {
-  render(h`<h1>안녕하세요, ${state.me.nickname}님</h1><p class="muted">건물을 눌러 이동하세요. 지도를 쓰기 어렵다면 아래 메뉴를 이용할 수 있어요.</p>
-    ${village()}
+  render(h`<h1>안녕하세요, ${state.me.nickname}님</h1><p class="muted">마을을 걸어 다니며 건물에 들어가 보세요. 걷기 어렵다면 아래 메뉴를 이용할 수 있어요.</p>
+    <div id="village" class="village-wrap"><p class="empty">마을을 불러오는 중…</p></div>
     <nav class="menu-list" aria-label="공간 이동 메뉴">
       <a href="#/library"><svg class="ic" viewBox="0 0 8 8" aria-hidden="true"><rect width="8" height="8" fill="#b5653a"/><rect x="1" y="2" width="6" height="5" fill="#e9d3a4"/><rect x="3" y="4" width="2" height="3" fill="#6b3f1f"/></svg><span><b>대도서관</b><br><span class="muted small">책 검색 · 탐색 · 추천</span></span></a>
       <a href="#/shelf"><svg class="ic" viewBox="0 0 8 8" aria-hidden="true"><rect width="8" height="8" fill="#4f8a5b"/><rect x="1" y="2" width="6" height="5" fill="#f0c9a0"/><rect x="3" y="4" width="2" height="3" fill="#6b3f1f"/></svg><span><b>내 서재</b><br><span class="muted small">책장 · 내 기록과 작품</span></span></a>
       ${SOON.map(([n, d]) => h`<button type="button" aria-disabled="true" data-soon="${n}"><svg class="ic" viewBox="0 0 8 8" aria-hidden="true"><rect width="8" height="8" fill="#aaa"/><rect x="1" y="2" width="6" height="5" fill="#ddd"/></svg><span><b>${n}</b> <span class="badge">준비 중</span><br><span class="muted small">${d}</span></span></button>`)}
     </nav>`);
+  const stop = await mountVillage($('#village'), { go: (hash) => { location.hash = hash; }, soon: (n) => toast(`${n}은(는) 준비 중이에요. 곧 만나요!`) });
+  if (location.hash !== '#/home') stop(); else cleanup = stop; // 로딩 중 이동했으면 바로 정리
 };
 
 views.library = async (_, qs) => {
@@ -465,8 +441,10 @@ const routes = [
   [/^\/book\/(\d+)$/, 'book'], [/^\/shelf$/, 'shelf'], [/^\/shelf\/(\d+)$/, 'myBook'], [/^\/write\/(\d+)(?:\/(\d+))?$/, 'write'],
   [/^\/work\/(\d+)$/, 'work'], [/^\/user\/(\d+)$/, 'user'], [/^\/settings$/, 'settings'], [/^\/admin$/, 'admin'],
 ];
+let cleanup = null;
 async function route() {
   main.onclick = null;
+  cleanup?.(); cleanup = null;
   const [path, query = ''] = (location.hash.slice(1) || '/').split('?');
   renderNav();
   const hit = routes.map(([re, name]) => [re.exec(path), name]).find(([m]) => m);
@@ -480,13 +458,9 @@ window.addEventListener('hashchange', route);
 
 // 마을 건물/준비 중 안내 (이벤트 위임)
 document.addEventListener('click', (e) => {
-  const g = e.target.closest('[data-go]'); const s = e.target.closest('[data-soon]');
-  if (g) location.hash = g.dataset.go; else if (s) toast(`${s.dataset.soon}은(는) 준비 중이에요. 곧 만나요!`);
+  const s = e.target.closest('.menu-list [data-soon]');
+  if (s) toast(`${s.dataset.soon}은(는) 준비 중이에요. 곧 만나요!`);
 });
-document.addEventListener('keydown', (e) => {
-  if ((e.key === 'Enter' || e.key === ' ') && e.target.matches?.('.bld')) { e.preventDefault(); e.target.dispatchEvent(new MouseEvent('click', { bubbles: true })); }
-});
-
 async function boot() {
   try {
     const [cfg, auth, me] = await Promise.all([api('GET', '/api/categories'), api('GET', '/api/auth/config'), api('GET', '/api/me')]);
