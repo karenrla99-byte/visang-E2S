@@ -116,9 +116,7 @@ const views = {};
 views.landing = async () => {
   if (state.me) return (location.hash = state.me.onboarded ? '#/home' : '#/onboarding');
   const failed = location.hash.includes('login=failed');
-  render(h`<section class="meadow" aria-labelledby="logo" style="background-image:url(${asset('/assets/scene/grass.png')})">
-      <img class="m-plaza" src="${asset('/assets/scene/plaza.png')}" alt="" draggable="false"><img class="m-oakwide" src="${asset('/assets/scene/tree-oak-wide.png')}" alt="" draggable="false"><img class="m-pine l" src="${asset('/assets/scene/tree-pine.png')}" alt="" draggable="false"><img class="m-oak r" src="${asset('/assets/scene/tree-oak.png')}" alt="" draggable="false"><img class="m-oak s l" src="${asset('/assets/scene/tree-oak.png')}" alt="" draggable="false"><img class="m-pine s r" src="${asset('/assets/scene/tree-pine.png')}" alt="" draggable="false">
-      <div class="meadow-in">
+  render(h`<section class="hero hero-map" aria-labelledby="logo" style="background-image:url(/assets/village/plaza-map.jpg)">
       <h1 class="logo" id="logo">BookRest</h1>
       <p class="tagline">읽은 책은 나의 이야기가 되고,<br>우리의 이야기는 하나의 도서관이 됩니다.</p>
       <div class="login-box" aria-label="로그인">
@@ -126,7 +124,7 @@ views.landing = async () => {
         ${state.auth.providers.map((p) => h`<a class="btn" href="/api/auth/${p.id}/start">${p.label}(으)로 시작하기</a>`)}
         ${state.auth.devLogin && h`<form id="dev" class="card stack"><label for="dn" style="margin-top:0">개발용 간편 로그인</label><input id="dn" maxlength="20" placeholder="닉네임" required><button class="btn">입장하기</button><button type="button" id="adm" class="btn secondary small">운영자로 입장</button></form>`}
         ${!state.auth.providers.length && !state.auth.devLogin && h`<p class="tagline">현재 사용할 수 있는 로그인 방식이 없습니다.</p>`}
-      </div></div></section>
+      </div></section>
     <div class="features">
       <div class="card"><div class="card-h"><span class="no">01</span>기록</div><p>읽은 책을 책장에 꽂고 비공개 감상과 공개 한 줄 평을 남겨요.</p></div>
       <div class="card"><div class="card-h"><span class="no">02</span>창작</div><p>팬아트, 외전, 굿즈 기획까지 책을 바탕으로 만들어요.</p></div>
@@ -140,14 +138,14 @@ views.onboarding = async () => {
   if (!state.me) return (location.hash = '#/');
   const picked = new Set(state.me.interests); const books = new Set();
   const cats = state.cfg.categories.filter((c) => c !== '기타');
-  render(h`<div class="meadow slim" style="background-image:url(${asset('/assets/scene/grass.png')})"><img class="m-pine l" src="${asset('/assets/scene/tree-pine.png')}" alt="" draggable="false"><img class="m-oak r" src="${asset('/assets/scene/tree-oak.png')}" alt="" draggable="false"><div class="card stack meadow-in" style="max-width:720px;width:100%;text-align:left"><h1>처음 오셨군요!</h1>
+  render(h`<div class="card stack" style="max-width:720px;margin:0 auto"><h1>처음 오셨군요!</h1>
     <form id="f"><label for="nn">닉네임</label><input id="nn" maxlength="20" required value="${state.me.nickname}" placeholder="마을에서 불릴 이름">
     <label>관심 분야 <span class="muted small">(최대 5개 · 건너뛸 수 있어요)</span></label>
     <div class="chips" id="chips">${cats.map((c) => h`<button type="button" class="chip" aria-pressed="${picked.has(c)}" data-c="${c}">${c}</button>`)}</div>
     <label>읽고 있거나 읽고 싶은 책 <span class="muted small">(고르면 내 서재에 꽂아 드려요 · 최대 6권)</span></label>
     <div class="pick" id="pick" aria-live="polite"><p class="muted small">불러오는 중…</p></div>
     <p class="err" id="e" role="alert"></p>
-    <div class="row" style="margin-top:16px"><button class="btn">시작하기 (+200P)</button><button type="button" class="btn secondary" id="skip">관심 분야·책 건너뛰기</button></div></form></div></div>`);
+    <div class="row" style="margin-top:16px"><button class="btn">시작하기 (+200P)</button><button type="button" class="btn secondary" id="skip">관심 분야·책 건너뛰기</button></div></form></div>`);
   const drawPick = async () => {
     try {
       const r = await api('GET', `/api/books/recommended?categories=${encodeURIComponent([...picked].join(','))}`);

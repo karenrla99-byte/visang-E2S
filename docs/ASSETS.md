@@ -259,14 +259,3 @@
 | `public/assets/kinds/<종류>.png` ×9 | 종류 아이콘 시트(한 줄 평·서평·팬아트·굿즈·코스프레·외전·웹소설·웹툰·기타) → 탭·뱃지·작성 힌트 | 같은 스크립트 |
 | `public/assets/avatar/character-walk.png` | 캐릭터 4×4 시트(아래·왼쪽·오른쪽·위) | `python3 scripts/make-character-sheet.py <원본>` (머리 위 여유 포함) |
 | `public/assets/avatar/item-<id>.png` ×9 | 캐릭터에 입히는 겹침 시트(같은 4×4). 모자·소품은 프레임마다 머리/몸 위치에 아이템 그림을 얹고, 옷은 셔츠 색만 바꾼다 | `python3 scripts/make-item-sprites.py` |
-
-## 8. 장면 에셋 (입장·온보딩)
-
-| 파일 | 쓰는 곳 |
-|---|---|
-| `public/assets/scene/grass.png` | 풀밭 바닥 타일(256px로 반복) — 입장 화면·온보딩 배경 |
-| `public/assets/scene/plaza.png` | 돌 광장(타원) — 입장 화면의 로그인 상자 아래 |
-| `public/assets/scene/tree-oak-wide.png` | 넓게 퍼진 참나무 — 입장 화면 위쪽 그늘 |
-| `public/assets/scene/tree-oak.png` · `tree-pine.png` | 참나무·소나무 — 입장 화면과 온보딩 양옆 |
-
-마을 홈은 지도 이미지 한 장이라 이 에셋을 쓰지 않는다. 스타일은 `public/style.css`의 `.meadow`.

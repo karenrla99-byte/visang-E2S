@@ -49,7 +49,7 @@ js = js.replaceAll('/assets/avatar/character-walk.png', sprite).replaceAll('/ass
 const font = (f) => `data:font/woff2;base64,${fs.readFileSync(P('public/fonts', f)).toString('base64')}`;
 // 도트 아이콘·아이템 겹침 시트를 {경로: data URI}로 묶는다(public/assets.js 가 읽는다)
 const assetMap = {};
-for (const [dir, test] of [['shop', () => true], ['kinds', () => true], ['scene', () => true], ['avatar', (n) => n.startsWith('item-')]]) {
+for (const [dir, test] of [['shop', () => true], ['kinds', () => true], ['avatar', (n) => n.startsWith('item-')]]) {
   for (const n of fs.readdirSync(P('public/assets', dir)).filter((x) => x.endsWith('.png') && test(x))) assetMap[`/assets/${dir}/${n}`] = `data:image/png;base64,${fs.readFileSync(P('public/assets', dir, n)).toString('base64')}`;
 }
 const css = fs.readFileSync(P('public/style.css'), 'utf8').replace('/fonts/Galmuri11.woff2', font('Galmuri11.woff2')).replace('/fonts/Galmuri11-Bold.woff2', font('Galmuri11-Bold.woff2'));
