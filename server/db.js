@@ -15,6 +15,10 @@ export function openDb(file) {
     interests TEXT NOT NULL DEFAULT '[]',
     role TEXT NOT NULL DEFAULT 'user',
     onboarded INTEGER NOT NULL DEFAULT 0,
+    points INTEGER NOT NULL DEFAULT 250,
+    inventory TEXT NOT NULL DEFAULT '[]',
+    avatar TEXT NOT NULL DEFAULT '{}',
+    bio TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     UNIQUE (provider, provider_id)
   );
@@ -33,7 +37,11 @@ export function openDb(file) {
     cover_url TEXT NOT NULL DEFAULT '',
     description TEXT NOT NULL DEFAULT '',
     category TEXT NOT NULL DEFAULT '기타',
-    source TEXT NOT NULL DEFAULT 'seed'
+    source TEXT NOT NULL DEFAULT 'seed',
+    translator TEXT NOT NULL DEFAULT '',
+    tags TEXT NOT NULL DEFAULT '[]',
+    published_year INTEGER,
+    page_count INTEGER
   );
   CREATE INDEX IF NOT EXISTS idx_books_category ON books(category);
   CREATE TABLE IF NOT EXISTS shelf (
@@ -41,6 +49,7 @@ export function openDb(file) {
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     book_id INTEGER NOT NULL REFERENCES books(id),
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    status TEXT NOT NULL DEFAULT 'reading',
     UNIQUE (user_id, book_id)
   );
   CREATE TABLE IF NOT EXISTS contents (
@@ -54,7 +63,8 @@ export function openDb(file) {
     hidden INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    published_at TEXT
+    published_at TEXT,
+    base_likes INTEGER NOT NULL DEFAULT 0
   );
   CREATE INDEX IF NOT EXISTS idx_contents_book ON contents(book_id, visibility, hidden);
   CREATE INDEX IF NOT EXISTS idx_contents_user ON contents(user_id, book_id);
@@ -64,7 +74,8 @@ export function openDb(file) {
     stored_name TEXT NOT NULL,
     mime TEXT NOT NULL,
     size INTEGER NOT NULL,
-    alt TEXT NOT NULL DEFAULT ''
+    alt TEXT NOT NULL DEFAULT '',
+    external_url TEXT NOT NULL DEFAULT ''
   );
   CREATE TABLE IF NOT EXISTS likes (
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -85,6 +96,14 @@ export function openDb(file) {
     handled_by INTEGER,
     handled_at TEXT
   );
+  CREATE TABLE IF NOT EXISTS point_log (
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    kind TEXT NOT NULL,
+    ref TEXT NOT NULL,
+    delta INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (user_id, kind, ref)
+  );
   CREATE TABLE IF NOT EXISTS notices (
     id INTEGER PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -93,5 +112,15 @@ export function openDb(file) {
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
   `);
+  // 이전 버전 DB 보강
+  const ensure = (table, col, ddl) => {
+    if (!db.prepare(`PRAGMA table_info(${table})`).all().some((c) => c.name === col)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${ddl}`);
+  };
+  ensure('users', 'points', 'INTEGER NOT NULL DEFAULT 250'); ensure('users', 'inventory', "TEXT NOT NULL DEFAULT '[]'");
+  ensure('users', 'avatar', "TEXT NOT NULL DEFAULT '{}'"); ensure('users', 'bio', "TEXT NOT NULL DEFAULT ''");
+  ensure('books', 'translator', "TEXT NOT NULL DEFAULT ''"); ensure('books', 'tags', "TEXT NOT NULL DEFAULT '[]'");
+  ensure('books', 'published_year', 'INTEGER'); ensure('books', 'page_count', 'INTEGER');
+  ensure('shelf', 'status', "TEXT NOT NULL DEFAULT 'reading'"); ensure('contents', 'base_likes', 'INTEGER NOT NULL DEFAULT 0');
+  ensure('attachments', 'external_url', "TEXT NOT NULL DEFAULT ''");
   return db;
 }

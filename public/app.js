@@ -41,8 +41,9 @@ const hue = (s) => { let x = 0; for (const c of s) x = (x * 31 + c.charCodeAt(0)
 const cover = (b, cls = '') => b.cover_url
   ? h`<img class="cover ${cls}" src="${b.cover_url}" alt="${b.title} 표지" loading="lazy" data-title="${b.title}" style="--cv:hsl(${hue(b.title)} 38% 38%)" referrerpolicy="no-referrer">`
   : h`<div class="cover ${cls}" role="img" aria-label="${b.title} 표지(자동 생성)" style="--cv:hsl(${hue(b.title)} 38% 38%)">${b.title}</div>`;
-document.addEventListener('error', (e) => { // 표지 로드 실패 → 자동 생성 표지
+document.addEventListener('error', (e) => { // 표지 로드 실패 → 자동 생성 표지, 작품 이미지 실패 → 안내
   const img = e.target;
+  if (img.tagName === 'IMG' && (img.closest?.('.gimg') || img.classList.contains('thumb'))) { const sp = document.createElement('span'); sp.className = 'small muted'; sp.style.cssText = 'padding:8px;text-align:center'; sp.textContent = '이미지를 불러오지 못했어요'; img.replaceWith(sp); return; }
   if (img.tagName !== 'IMG' || !img.classList.contains('cover')) return;
   const d = document.createElement('div');
   d.className = img.className; d.setAttribute('role', 'img'); d.setAttribute('aria-label', `${img.dataset.title} 표지(자동 생성)`);
@@ -72,19 +73,27 @@ function workCard(c, { book } = {}) {
 }
 
 // ---------- 내비게이션 ----------
+const NAV = [['#/home', '마을 홈'], ['#/library', '대도서관'], ['#/shelf', '내 서재'], ['#/gallery', '창작 전시관'], ['#/shop', '꾸미기 상점']];
 function renderNav() {
   const top = $('#topbar'); const nav = $('#nav');
   top.hidden = !state.me;
   if (!state.me) return;
   const cur = location.hash;
-  const link = (href, text) => `<a href="${href}" ${cur.startsWith(href) ? 'aria-current="page"' : ''}>${text}</a>`;
-  nav.innerHTML = [link('#/home', '마을'), link('#/library', '대도서관'), link('#/shelf', '내 서재'), link('#/settings', '설정'),
-    state.me.role === 'admin' ? link('#/admin', '운영') : ''].join('');
+  const on = (href) => cur.startsWith(href) || (href === '#/library' && cur.startsWith('#/book/')) || (href === '#/gallery' && cur.startsWith('#/work/'));
+  const link = (href, text) => `<a href="${href}" ${on(href) ? 'aria-current="page"' : ''}>${text}</a>`;
+  nav.innerHTML = NAV.map(([href, t]) => link(href, t)).join('') + '<span class="sp"></span>'
+    + `<a class="pts" href="#/shop" title="독서 포인트 (상점에서 사용)" aria-label="독서 포인트 ${state.me.points}점"><span class="coin" aria-hidden="true"></span><span>${state.me.points.toLocaleString()}</span><span class="small">P</span></a>`
+    + (state.me.role === 'admin' ? link('#/admin', '운영') : '')
+    + `<a class="me-chip" href="#/settings" title="설정"><span class="avmini">${avatarSvg(state.me.avatar, 'down')}</span><span class="nm small">${esc(state.me.nickname)}</span></a>`;
 }
+async function refreshMe() { try { state.me = (await api('GET', '/api/me')).user; renderNav(); } catch { /* 표시용 갱신 실패는 무시 */ } }
+const pts = (n) => (n ? ` (+${n}P)` : '');
 
-import { mountVillage, forestStrip } from '/village.js';
+import { mountVillage, BUILDINGS } from '/village.js';
+import { avatarSvg, LOOK } from '/avatar.js';
 
-const SOON = [['미술관', '팬아트를 전시하는 공간'], ['글 작업실', '외전·웹소설을 쓰는 공간'], ['웹툰 공간', '연재 작품을 모으는 공간'], ['굿즈 상점', '굿즈 기획과 관심 표현']];
+const GALLERY_TABS = [['all', '전체'], ['fanart', '팬아트 일러스트'], ['goods', '굿즈 기획'], ['spinoff', '외전·패러렐 글'], ['webtoon', '웹툰 콘티'], ['etc', '기타']];
+const STATUS = { reading: '읽는 중', completed: '완독', want_to_read: '읽고 싶은' };
 
 // ---------- 뷰 ----------
 const views = {};
@@ -92,8 +101,7 @@ const views = {};
 views.landing = async () => {
   if (state.me) return (location.hash = state.me.onboarded ? '#/home' : '#/onboarding');
   const failed = location.hash.includes('login=failed');
-  render(h`<section class="hero" aria-labelledby="logo">
-      <div class="forest" aria-hidden="true">${new Raw(forestStrip())}</div>
+  render(h`<section class="hero hero-map" aria-labelledby="logo" style="background-image:url(/assets/village/plaza-map.jpg)">
       <h1 class="logo" id="logo">BookRest</h1>
       <p class="tagline">읽은 책은 나의 이야기가 되고,<br>우리의 이야기는 하나의 도서관이 됩니다.</p>
       <div class="login-box" aria-label="로그인">
@@ -113,44 +121,65 @@ views.landing = async () => {
 
 views.onboarding = async () => {
   if (!state.me) return (location.hash = '#/');
-  const picked = new Set(state.me.interests);
-  render(h`<div class="card stack" style="max-width:560px;margin:0 auto"><h1>처음 오셨군요!</h1>
+  const picked = new Set(state.me.interests); const books = new Set();
+  const cats = state.cfg.categories.filter((c) => c !== '기타');
+  render(h`<div class="card stack" style="max-width:720px;margin:0 auto"><h1>처음 오셨군요!</h1>
     <form id="f"><label for="nn">닉네임</label><input id="nn" maxlength="20" required value="${state.me.nickname}" placeholder="마을에서 불릴 이름">
     <label>관심 분야 <span class="muted small">(최대 5개 · 건너뛸 수 있어요)</span></label>
-    <div class="chips" id="chips">${state.cfg.categories.filter((c) => c !== '기타').map((c) => h`<button type="button" class="chip" aria-pressed="${picked.has(c)}" data-c="${c}">${c}</button>`)}</div>
+    <div class="chips" id="chips">${cats.map((c) => h`<button type="button" class="chip" aria-pressed="${picked.has(c)}" data-c="${c}">${c}</button>`)}</div>
+    <label>읽고 있거나 읽고 싶은 책 <span class="muted small">(고르면 내 서재에 꽂아 드려요 · 최대 6권)</span></label>
+    <div class="pick" id="pick" aria-live="polite"><p class="muted small">불러오는 중…</p></div>
     <p class="err" id="e" role="alert"></p>
-    <div class="row" style="margin-top:16px"><button class="btn">시작하기</button><button type="button" class="btn secondary" id="skip">관심 분야 건너뛰기</button></div></form></div>`);
-  $('#chips').onclick = (e) => {
+    <div class="row" style="margin-top:16px"><button class="btn">시작하기 (+200P)</button><button type="button" class="btn secondary" id="skip">관심 분야·책 건너뛰기</button></div></form></div>`);
+  const drawPick = async () => {
+    try {
+      const r = await api('GET', `/api/books/recommended?categories=${encodeURIComponent([...picked].join(','))}`);
+      $('#pick').innerHTML = r.books.slice(0, 12).map((b) => `<button type="button" class="book" data-b="${b.id}" aria-pressed="${books.has(b.id)}">${cover(b).s}<b>${esc(b.title)}</b><span>${esc(b.author)}</span></button>`).join('');
+    } catch (e) { $('#pick').innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+  };
+  $('#chips').onclick = async (e) => {
     const b = e.target.closest('.chip'); if (!b) return;
     if (!picked.has(b.dataset.c) && picked.size >= 5) return toast('관심 분야는 최대 5개까지 고를 수 있어요.');
     picked.has(b.dataset.c) ? picked.delete(b.dataset.c) : picked.add(b.dataset.c);
     b.setAttribute('aria-pressed', picked.has(b.dataset.c));
+    drawPick();
   };
-  const save = async (interests) => {
-    try { state.me = (await api('PATCH', '/api/me', { nickname: $('#nn').value, interests })).user; renderNav(); location.hash = '#/home'; } catch (e) { $('#e').textContent = e.message; }
+  $('#pick').onclick = (e) => {
+    const b = e.target.closest('[data-b]'); if (!b) return; const id = Number(b.dataset.b);
+    if (!books.has(id) && books.size >= 6) return toast('책은 최대 6권까지 고를 수 있어요.');
+    books.has(id) ? books.delete(id) : books.add(id); b.setAttribute('aria-pressed', books.has(id));
   };
-  $('#f').onsubmit = (e) => { e.preventDefault(); save([...picked]); };
-  $('#skip').onclick = () => { if ($('#nn').reportValidity()) save([]); };
+  const save = async (interests, bookIds) => {
+    try { const r = await api('PATCH', '/api/me', { nickname: $('#nn').value, interests, bookIds }); state.me = r.user; renderNav(); toast(`북레스트에 오신 걸 환영해요!${pts(r.bonus)}`); location.hash = '#/home'; } catch (e) { $('#e').textContent = e.message; }
+  };
+  $('#f').onsubmit = (e) => { e.preventDefault(); save([...picked], [...books]); };
+  $('#skip').onclick = () => { if ($('#nn').reportValidity()) save([], []); };
+  drawPick();
 };
 
 views.home = async () => {
-  render(h`<h1>안녕하세요, ${state.me.nickname}님</h1><p class="muted">숲속 마을을 자유롭게 돌아다니며 건물에 들어가 보세요. 걷기 어렵다면 아래 메뉴를 이용할 수 있어요.</p>
+  render(h`<div class="row between"><div><h1>픽셀 숲 마을 <span class="badge pub">도서관 빌리지</span></h1><p class="muted" style="margin:0">캐릭터를 움직여 건물 문 앞에서 입장하거나, 건물을 눌러 바로 이동해요. 걷기 어렵다면 아래 메뉴를 이용할 수 있어요.</p></div></div>
     <div id="village" class="village-wrap"><p class="empty">마을을 불러오는 중…</p></div>
+    <div class="pstatus" id="pstatus" aria-live="polite"><span class="badge">방향키·WASD 또는 지도를 눌러 이동하세요</span></div>
     <nav class="menu-list" aria-label="공간 이동 메뉴">
-      <a href="#/library"><svg class="ic" viewBox="0 0 8 8" aria-hidden="true"><rect width="8" height="8" fill="#b5653a"/><rect x="1" y="2" width="6" height="5" fill="#e9d3a4"/><rect x="3" y="4" width="2" height="3" fill="#6b3f1f"/></svg><span><b>대도서관</b><br><span class="muted small">책 검색 · 탐색 · 추천</span></span></a>
-      <a href="#/shelf"><svg class="ic" viewBox="0 0 8 8" aria-hidden="true"><rect width="8" height="8" fill="#4f8a5b"/><rect x="1" y="2" width="6" height="5" fill="#f0c9a0"/><rect x="3" y="4" width="2" height="3" fill="#6b3f1f"/></svg><span><b>내 서재</b><br><span class="muted small">책장 · 내 기록과 작품</span></span></a>
-      ${SOON.map(([n, d]) => h`<button type="button" aria-disabled="true" data-soon="${n}"><svg class="ic" viewBox="0 0 8 8" aria-hidden="true"><rect width="8" height="8" fill="#aaa"/><rect x="1" y="2" width="6" height="5" fill="#ddd"/></svg><span><b>${n}</b> <span class="badge">준비 중</span><br><span class="muted small">${d}</span></span></button>`)}
+      ${BUILDINGS.map((b) => b.soon
+        ? h`<button type="button" aria-disabled="true" data-soon="${b.name}"><span><b>${b.name}</b> <span class="badge">준비 중</span><br><span class="muted small">${b.desc}</span></span></button>`
+        : h`<a href="${b.go}"><span><b>${b.name}</b><br><span class="muted small">${b.desc}</span></span></a>`)}
     </nav>`);
-  const stop = await mountVillage($('#village'), { go: (hash) => { location.hash = hash; }, soon: (n) => toast(`${n}은(는) 준비 중이에요. 곧 만나요!`) });
+  const status = $('#pstatus');
+  const stop = await mountVillage($('#village'), {
+    go: (hash) => { location.hash = hash; }, soon: (n) => toast(`${n}은(는) 2차 오픈 예정이에요. 곧 만나요!`),
+    onNear: (b) => { status.innerHTML = b ? h`<button class="btn small" id="enter">${b.name} 입장하기 (Enter)</button>`.s : '<span class="badge">방향키·WASD 또는 지도를 눌러 이동하세요</span>'; $('#enter')?.addEventListener('click', () => (b.soon ? toast(`${b.name}은(는) 2차 오픈 예정이에요. 곧 만나요!`) : (location.hash = b.go))); },
+  }, state.me);
   if (location.hash !== '#/home') stop(); else cleanup = stop; // 로딩 중 이동했으면 바로 정리
 };
 
 views.library = async (_, qs) => {
   const q = qs.get('q') || ''; const cat = qs.get('c') || '';
-  render(h`<h1>대도서관</h1>
+  render(h`<section class="hero-lib" style="background-image:url(/assets/library-hall.jpg)"><span class="badge">대도서관 본관</span><h1>세상의 모든 지혜와 문장이<br>머무르는 대도서관</h1><p>고전문학과 인문학을 탐색하고, 책에 얽힌 독자들의 감상과 팬아트 창작물을 둘러보세요.</p></section>
     <form id="s" role="search" class="row" style="flex-wrap:nowrap"><label for="q" class="sr" style="position:absolute;left:-999px">제목 또는 작가 검색</label>
       <input id="q" type="search" placeholder="제목 또는 작가로 검색" value="${q}" maxlength="100"><button class="btn">검색</button></form>
-    <div class="chips" style="margin-top:12px" role="group" aria-label="장르·주제"><button class="chip" aria-pressed="${!cat}" data-c="">전체</button>${state.cfg.categories.map((c) => h`<button class="chip" aria-pressed="${cat === c}" data-c="${c}">${c}</button>`)}</div>
+    <div class="chips" style="margin-top:12px" role="group" aria-label="장르·주제"><button class="chip" aria-pressed="${!cat}" data-c="">전체</button>${state.cfg.categories.filter((c) => c !== '기타').map((c) => h`<button class="chip" aria-pressed="${cat === c}" data-c="${c}">${c}</button>`)}</div>
     <div id="out" style="margin-top:20px" aria-live="polite"><p class="empty">불러오는 중…</p></div>`);
   const go = (nq, nc) => { location.hash = `#/library?${new URLSearchParams({ ...(nq && { q: nq }), ...(nc && { c: nc }) })}`; };
   $('#s').onsubmit = (e) => { e.preventDefault(); go($('#q').value.trim(), cat); };
@@ -194,7 +223,8 @@ views.book = async ([id]) => {
   const tabs = [['oneline', '한 줄 평'], ['review', '감상문·서평'], ['creative', '2차 창작']];
   let tab = 'oneline'; let sort = 'latest';
   render(h`<div class="detail"><div class="cover-lg">${cover(b, 'cover-lg')}</div>
-    <div style="flex:1;min-width:240px" class="stack"><div><h1>${b.title}</h1><p class="muted">${b.author}${b.publisher && ' · ' + b.publisher} <span class="badge">${b.category}</span></p></div>
+    <div style="flex:1;min-width:240px" class="stack"><div><h1>${b.title}</h1><p class="muted">${b.author}${b.translator && ' · 옮김 ' + b.translator}${b.publisher && ' · ' + b.publisher}${b.published_year && ' · ' + b.published_year}${b.page_count && ' · ' + b.page_count + '쪽'} <span class="badge">${b.category}</span></p>
+      ${b.tags?.length > 0 && h`<div class="row">${b.tags.map((t) => h`<span class="badge">#${t}</span>`)}</div>`}</div>
       ${b.description && h`<p>${b.description}</p>`}
       <div class="row" id="act"></div></div></div>
     ${d.top.length > 0 && h`<section aria-labelledby="top"><h2 id="top" style="margin-top:24px">인기 작품 TOP ${d.top.length}</h2><div class="stack">${d.top.map((c, i) => h`<div class="row" style="flex-wrap:nowrap;align-items:flex-start"><span class="rank" aria-label="${i + 1}위">${i + 1}</span><div style="flex:1;min-width:0">${workCard(c)}</div></div>`)}</div></section>`}
@@ -205,7 +235,7 @@ views.book = async ([id]) => {
   const drawAct = () => {
     act.innerHTML = d.inShelf ? h`<span class="badge pub">내 책장에 있음</span><a class="btn" href="#/shelf/${b.id}">내 서재에서 보기</a>`.s : '<button class="btn" id="add">내 책장에 추가</button>';
     $('#add')?.addEventListener('click', async () => {
-      try { await api('POST', '/api/shelf', { bookId: b.id }); d.inShelf = true; drawAct(); toast('내 책장에 꽂았어요.'); } catch (e) { toast(e.message); }
+      try { const r = await api('POST', '/api/shelf', { bookId: b.id }); d.inShelf = true; drawAct(); toast(`내 책장에 꽂았어요${pts(r.points)}`); refreshMe(); } catch (e) { toast(e.message); }
     });
   };
   drawAct();
@@ -234,14 +264,18 @@ views.book = async ([id]) => {
   loadList(false);
 };
 
-views.shelf = async () => {
+views.shelf = async (_, qs) => {
   loading();
   let d;
   try { d = await api('GET', '/api/shelf'); } catch (e) { return failure(e, views.shelf); }
+  const f = qs?.get('s') || 'all'; const list = d.books.filter((b) => f === 'all' || b.status === f);
+  const count = (k) => d.books.filter((b) => k === 'all' || b.status === k).length;
   render(h`<div class="row between"><h1>내 서재</h1><a class="btn secondary" href="#/user/${state.me.id}">내 공개 서재 보기</a></div>
     <p class="muted">${state.me.nickname}님의 책장 · ${d.books.length}권</p>
-    ${d.books.length ? h`<div class="shelf">${d.books.map((b) => h`<a class="book" href="#/shelf/${b.id}">${cover(b)}<b>${b.title}</b><span>기록 ${b.total} · 공개 ${b.pub}</span></a>`)}</div>`
-      : h`<div class="empty card"><p><b>책장이 비어 있어요.</b></p><p>대도서관에서 읽은 책을 찾아 책장에 꽂아 보세요.</p><a class="btn" href="#/library">대도서관 가기</a></div>`}`);
+    <div class="chips" role="group" aria-label="읽기 상태">${[['all', '전체'], ...Object.entries(STATUS)].map(([k, l]) => h`<a class="chip" role="button" aria-pressed="${f === k}" href="#/shelf?s=${k}" style="text-decoration:none;display:inline-flex;align-items:center">${l} ${count(k)}</a>`)}</div>
+    <div style="margin-top:16px"></div>
+    ${list.length ? h`<div class="shelf">${list.map((b) => h`<a class="book" href="#/shelf/${b.id}">${cover(b)}<b>${b.title}</b><span>${STATUS[b.status]} · 기록 ${b.total} · 공개 ${b.pub}</span></a>`)}</div>`
+      : h`<div class="empty card"><p><b>${d.books.length ? '이 상태의 책이 없어요.' : '책장이 비어 있어요.'}</b></p><p>대도서관에서 읽은 책을 찾아 책장에 꽂아 보세요.</p><a class="btn" href="#/library">대도서관 가기</a></div>`}`);
 };
 
 views.myBook = async ([id]) => {
@@ -252,6 +286,7 @@ views.myBook = async ([id]) => {
   render(h`<a href="#/shelf">← 내 서재</a>
     <div class="detail" style="margin-top:12px"><div class="cover-lg">${cover(b, 'cover-lg')}</div><div style="flex:1;min-width:240px" class="stack">
       <h1>${b.title}</h1><p class="muted">${b.author}</p>
+      <div class="row"><label for="st" class="small" style="margin:0">읽기 상태</label><select id="st" style="width:auto;min-width:140px">${Object.entries(STATUS).map(([k, l]) => h`<option value="${k}" ${k === d.status && 'selected'}>${l}</option>`)}</select></div>
       <div class="row"><a class="btn" href="#/write/${b.id}">+ 새 기록 쓰기</a><a class="btn secondary" href="#/book/${b.id}">공용 도서관에서 보기</a><button class="btn secondary" id="rm">책장에서 빼기</button></div></div></div>
     <h2 style="margin-top:24px">내 기록과 작품 <span class="muted small">${d.contents.length}</span></h2>
     <div class="stack">${d.contents.length ? d.contents.map((c) => h`<div>${workCard(c)}<div class="row" style="margin-top:6px">
@@ -271,6 +306,7 @@ views.myBook = async ([id]) => {
       }
     } catch (er) { toast(er.message); }
   };
+  $('#st').onchange = async (e) => { try { await api('PATCH', `/api/shelf/${id}`, { status: e.target.value }); toast('읽기 상태를 바꿨어요.'); } catch (er) { toast(er.message); } };
   $('#rm').onclick = async () => {
     const v = await dialog(h`<h2>책장에서 뺄까요?</h2><p>이 책에 남긴 내 기록 ${d.contents.length}개는 어떻게 할까요?</p>
       <div class="stack"><button class="btn" data-v="keep" style="width:100%">기록은 비공개로 보관 (다시 꽂으면 복원)</button>
@@ -349,7 +385,7 @@ views.write = async ([bookId, contentId]) => {
     $('#save').disabled = true;
     try {
       const r = existing ? await api('PUT', `/api/contents/${existing.id}`, fd) : await api('POST', '/api/contents', fd);
-      toast(vis === 'public' ? '공개로 저장했어요.' : '비공개로 저장했어요.'); location.hash = `#/shelf/${book.id}`; void r;
+      toast(`${vis === 'public' ? '공개로 저장했어요' : '비공개로 저장했어요'}${pts(r.points)}`); refreshMe(); location.hash = `#/shelf/${book.id}`;
     } catch (er) { err.textContent = er.message + ' 입력한 내용은 그대로 남아 있어요.'; $('#save').disabled = false; } // 실패해도 입력 유지
   };
 };
@@ -386,11 +422,61 @@ views.user = async ([id]) => {
   loading();
   let d;
   try { d = await api('GET', `/api/users/${id}`); } catch (e) { return failure(e, () => views.user([id])); }
-  render(h`<div class="row between"><div><h1>${d.user.nickname}님의 서재</h1><p class="muted">공개된 책과 콘텐츠만 보여요.</p></div>${!d.isMe && h`<button class="btn secondary small" id="rep">프로필 신고</button>`}</div>
+  render(h`<div class="row between"><div class="row" style="flex-wrap:nowrap"><span class="avmini" style="width:48px;height:64px">${new Raw(avatarSvg(d.user.avatar, 'down'))}</span><div><h1>${d.user.nickname}님의 서재</h1><p class="muted" style="margin:0">${d.user.bio || '공개된 책과 콘텐츠만 보여요.'}</p></div></div>${!d.isMe && h`<button class="btn secondary small" id="rep">프로필 신고</button>`}</div>
     ${d.books.length ? d.books.map((b) => h`<section class="card" style="margin-bottom:16px"><div class="row" style="flex-wrap:nowrap;align-items:flex-start"><a href="#/book/${b.id}" style="width:80px;flex:none">${cover(b)}</a>
       <div style="flex:1;min-width:0" class="stack"><h2><a href="#/book/${b.id}">${b.title}</a></h2>${b.contents.map((c) => workCard(c))}</div></div></section>`)
       : h`<div class="empty card">아직 공개된 기록이 없어요.</div>`}`);
   $('#rep')?.addEventListener('click', () => reportDialog('profile', Number(id)));
+};
+
+views.gallery = async (_, qs) => {
+  const cat = qs.get('c') || 'all'; const sort = qs.get('o') === 'latest' ? 'latest' : 'popular';
+  render(h`<h1>창작 전시관</h1><p class="muted">독자들이 책을 바탕으로 만든 팬아트, 굿즈 기획, 외전, 웹툰 콘티를 모아 둔 공간이에요.</p>
+    <div class="chips" role="group" aria-label="분류">${GALLERY_TABS.map(([k, l]) => h`<a class="chip" role="button" aria-pressed="${cat === k}" href="#/gallery?c=${k}&o=${sort}" style="text-decoration:none;display:inline-flex;align-items:center">${l}</a>`)}</div>
+    <div class="row" style="margin-top:8px"><span class="small muted">정렬</span>${[['popular', '인기순'], ['latest', '최신순']].map(([k, l]) => h`<a class="chip" role="button" aria-pressed="${sort === k}" href="#/gallery?c=${cat}&o=${k}" style="text-decoration:none;display:inline-flex;align-items:center">${l}</a>`)}</div>
+    <div id="out" style="margin-top:18px" aria-live="polite"><p class="empty">불러오는 중…</p></div>`);
+  const out = $('#out'); let offset = 0; let first = true;
+  const card = (c) => h`<a class="gcard" href="#/work/${c.id}"><div class="gimg">${c.attachments[0] ? h`<img src="${c.attachments[0].url}" alt="${c.attachments[0].alt || c.title}" loading="lazy">` : h`<span class="small" style="padding:12px;text-align:center">${c.body.slice(0, 80)}${c.body.length > 80 ? '…' : ''}</span>`}</div>
+    <div class="gb"><span class="badge" style="align-self:flex-start">${c.kind_label}</span><h3>${c.title || '(제목 없음)'}</h3><div class="gm"><span>원작 「${c.book_title}」</span></div><div class="gm"><span>${c.author.nickname}</span><span aria-label="좋아요 ${c.likes}개">♥ ${c.likes}</span></div></div></a>`;
+  const more = async () => {
+    try {
+      const r = await api('GET', `/api/gallery?${new URLSearchParams({ category: cat, sort, offset })}`);
+      if (first) { out.innerHTML = '<div class="gal" id="g"></div><div id="m" class="row" style="justify-content:center;margin-top:16px"></div>'; first = false; if (!r.contents.length) out.innerHTML = '<div class="empty card"><p><b>아직 전시된 작품이 없어요.</b></p><p>내 서재에서 2차 창작물을 공개로 저장하면 이곳에 걸려요.</p><a class="btn" href="#/shelf">내 서재로</a></div>'; }
+      $('#g')?.insertAdjacentHTML('beforeend', r.contents.map((c) => card(c).s).join(''));
+      offset += r.contents.length; if ($('#m')) $('#m').innerHTML = r.hasMore ? '<button class="btn secondary" id="more">더 보기</button>' : ''; $('#more')?.addEventListener('click', more);
+    } catch (e) { out.innerHTML = `<div class="empty card"><p class="err" role="alert">${esc(e.message)}</p><button class="btn" id="rt">다시 시도</button></div>`; $('#rt').onclick = () => views.gallery(null, qs); }
+  };
+  more();
+};
+
+views.shop = async () => {
+  loading();
+  let d;
+  try { d = await api('GET', '/api/shop'); } catch (e) { return failure(e, views.shop); }
+  const slots = [['hat', '모자'], ['outfit', '옷'], ['accessory', '소품']];
+  const draw = () => {
+    render(h`<h1>꾸미기 상점</h1><p class="muted">책을 담고 기록을 남기며 모은 독서 포인트로 캐릭터를 꾸며요. 현재 <b>${d.points.toLocaleString()}P</b></p>
+      <div class="shop-grid"><div><div class="avprev" aria-label="캐릭터 미리보기">${new Raw(avatarSvg(d.avatar, 'down'))}</div>
+        <div class="card" style="margin-top:12px"><b class="small">피부색</b><div class="skins" role="group" aria-label="피부색">${d.skins.map((c) => h`<button type="button" class="skin" data-skin="${c}" style="background:${c}" aria-label="피부색 ${c}" aria-pressed="${d.avatar.skin === c}"></button>`)}</div></div></div>
+        <div class="stack">${slots.map(([slot, label]) => h`<section><h2>${label}</h2><div class="items">${d.items.filter((i) => i.slot === slot).map((i) => {
+          const own = d.inventory.includes(i.id); const worn = d.avatar[slot] === i.id;
+          return h`<div class="item ${worn ? 'on' : ''}"><span class="ic" aria-hidden="true">${i.icon}</span><b>${i.name}</b><p>${i.description}</p>
+            ${own ? h`<button class="btn small ${worn ? 'secondary' : ''}" data-wear="${i.id}" data-slot="${slot}" aria-pressed="${worn}">${worn ? '착용 중 (벗기)' : '착용하기'}</button>` : h`<button class="btn small" data-buy="${i.id}" ${d.points < i.price && 'disabled'}>${i.price}P로 구매</button>`}</div>`;
+        })}</div></section>`)}</div></div>`);
+  };
+  draw();
+  const sync = (u) => { state.me = u; d.points = u.points; d.inventory = u.inventory; d.avatar = u.avatar; renderNav(); draw(); };
+  main.onclick = async (e) => {
+    const buy = e.target.closest('[data-buy]'); const wear = e.target.closest('[data-wear]'); const skin = e.target.closest('[data-skin]');
+    try {
+      if (buy) { const r = await api('POST', '/api/shop/buy', { itemId: buy.dataset.buy }); toast(r.message); sync(r.user); }
+      else if (wear) { // 서버는 보낸 슬롯만 착용으로 보므로 전체 모습을 보낸다. 해제는 그 슬롯을 빼고 보낸다.
+        const slot = wear.dataset.slot; const next = { ...d.avatar };
+        if (d.avatar[slot] === wear.dataset.wear) delete next[slot]; else next[slot] = wear.dataset.wear;
+        sync((await api('PUT', '/api/me/avatar', next)).user);
+      } else if (skin) sync((await api('PUT', '/api/me/avatar', { ...d.avatar, skin: skin.dataset.skin })).user);
+    } catch (er) { toast(er.message); }
+  };
 };
 
 views.settings = async () => {
@@ -438,7 +524,7 @@ views.admin = async () => {
 const routes = [
   [/^$|^\/$/, 'landing'], [/^\/onboarding$/, 'onboarding'], [/^\/home$/, 'home'], [/^\/library$/, 'library'],
   [/^\/book\/(\d+)$/, 'book'], [/^\/shelf$/, 'shelf'], [/^\/shelf\/(\d+)$/, 'myBook'], [/^\/write\/(\d+)(?:\/(\d+))?$/, 'write'],
-  [/^\/work\/(\d+)$/, 'work'], [/^\/user\/(\d+)$/, 'user'], [/^\/settings$/, 'settings'], [/^\/admin$/, 'admin'],
+  [/^\/work\/(\d+)$/, 'work'], [/^\/user\/(\d+)$/, 'user'], [/^\/settings$/, 'settings'], [/^\/admin$/, 'admin'], [/^\/gallery$/, 'gallery'], [/^\/shop$/, 'shop'],
 ];
 let cleanup = null;
 async function route() {
@@ -458,7 +544,7 @@ window.addEventListener('hashchange', route);
 // 마을 건물/준비 중 안내 (이벤트 위임)
 document.addEventListener('click', (e) => {
   const s = e.target.closest('.menu-list [data-soon]');
-  if (s) toast(`${s.dataset.soon}은(는) 준비 중이에요. 곧 만나요!`);
+  if (s) toast(`${s.dataset.soon}은(는) 2차 오픈 예정이에요. 곧 만나요!`);
 });
 async function boot() {
   try {

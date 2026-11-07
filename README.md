@@ -22,6 +22,7 @@ npm test             # PRD 10장 검수 기준 통합 테스트
 | `BASE_URL` | OAuth 콜백 기준 주소 (예: `https://bookrest.example`) |
 | `OAUTH_{GOOGLE,KAKAO,NAVER}_CLIENT_ID` / `_CLIENT_SECRET` | 설정한 사업자의 로그인 버튼이 나타난다. 콜백: `{BASE_URL}/api/auth/{provider}/callback` |
 | `ADMIN_USERS` | 운영자 지정. `google:1234,kakao:5678` 형식 |
+| `SEED_DEMO` | `0`이면 미리보기용 데모 데이터(다른 독자 3명의 공개 작품·좋아요)를 넣지 않음. 기본: 운영(`NODE_ENV=production`)이 아니면 DB가 비었을 때 넣음 |
 | `DEV_LOGIN` | `1`/`0`으로 개발용 로그인 강제 |
 | `BOOKS_PROVIDER` | `local`이면 외부 도서 API를 쓰지 않음 |
 | `GOOGLE_BOOKS_API_KEY` | Google Books 호출 한도 상향 (없으면 익명 쿼터) |
@@ -42,7 +43,7 @@ npm test             # PRD 10장 검수 기준 통합 테스트
 
 ## 구현 범위
 
-1차 MVP 전부: SNS 로그인, 닉네임·관심 분야(건너뛰기 가능), 마을 홈(숲속 마을을 자유롭게 걸어 다니는 3/4 시점 픽셀 맵 + 동일 기능의 메뉴 목록, 준비 중 건물 안내), 책 검색·장르 탐색·관심 분야 추천, 책 상세, 내 책장/책별 포트폴리오, 한 줄 평·서평·2차 창작(이미지) 작성·수정·삭제, 개별 공개 설정, 공개 서재, 좋아요·TOP 3, 신고·운영자 검토·숨김·작성자 안내, 계정 삭제.
+1차 MVP 전부: SNS 로그인, 닉네임·관심 분야(건너뛰기 가능), 탭 5개(마을 홈·대도서관·내 서재·창작 전시관·꾸미기 상점)와 독서 포인트, 광장(숲 마을 지도 위를 걷는 픽셀 아바타 + 메뉴 목록, 준비 중 건물 안내), 창작 전시관(분류·인기/최신), 꾸미기 상점(모자·옷·소품 구매/착용), 읽기 상태(읽는 중·완독·읽고 싶은), 책 검색·장르 탐색·관심 분야 추천, 책 상세, 내 책장/책별 포트폴리오, 한 줄 평·서평·2차 창작(이미지) 작성·수정·삭제, 개별 공개 설정, 공개 서재, 좋아요·TOP 3, 신고·운영자 검토·숨김·작성자 안내, 계정 삭제.
 
 접근 제어는 모두 서버에서 검사한다. 비공개·숨김 콘텐츠와 그 첨부 파일은 작성자(및 운영자)만 열 수 있고, 공개→비공개 전환·삭제는 목록·랭킹·직접 주소·파일에 즉시 반영된다.
 
@@ -52,7 +53,7 @@ npm test             # PRD 10장 검수 기준 통합 테스트
 
 ```
 server/   Express API (app.js), SQLite 스키마(db.js), 도서 제공자(books.js), OAuth(oauth.js), 시드(seed.js)
-public/   빌드 없는 해시 라우터 SPA (index.html, app.js, style.css, village.js)
+public/   빌드 없는 해시 라우터 SPA (index.html, app.js, style.css, village.js=광장, avatar.js=픽셀 아바타)
 public/assets/village/  마을 이미지 에셋 자리 — 규격은 docs/ASSETS.md
 docs/     DESIGN.md(디자인 가이드), ASSETS.md(이미지 에셋 목록·요청문)
 tests/    node:test 통합 테스트 — PRD 10장 검수 기준 1~7 및 권한·업로드·계정 삭제
@@ -67,5 +68,5 @@ tests/    node:test 통합 테스트 — PRD 10장 검수 기준 1~7 및 권한�
 ## 디자인과 마을 이미지
 
 - 디자인 기준: [`docs/DESIGN.md`](docs/DESIGN.md) — 갈색·초록 메인 컬러, 노을 숲 마을 콘셉트.
-- 이미지 에셋 목록과 요소별 생성 요청문: [`docs/ASSETS.md`](docs/ASSETS.md). `public/assets/village/`에 규격에 맞는 PNG를 넣으면 자동으로 교체되고, 없는 파일은 코드로 그린 기본 도트가 나온다.
-- 마을 조작: 방향키/WASD 걷기, 건물 앞에서 Enter, 땅·건물 클릭/탭 이동. `prefers-reduced-motion`이면 애니메이션 없이 즉시 이동.
+- 이미지 에셋 목록과 요소별 생성 요청문: [`docs/ASSETS.md`](docs/ASSETS.md). 광장은 `public/assets/village/plaza-map.jpg` 한 장 위에서 움직이며, 건물 핀 위치는 `public/village.js`의 `BUILDINGS`(% 좌표)에 있다.
+- 광장 조작: 방향키/WASD 걷기, 문 앞에서 Enter, 지도·건물 클릭/탭 이동. `prefers-reduced-motion`이면 애니메이션 없이 즉시 이동.

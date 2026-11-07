@@ -98,37 +98,7 @@ dialog::backdrop { background: rgba(24, 16, 10, .62); }
 .menu-list [aria-disabled="true"] { background: #E1E3EA; color: #5d6680; box-shadow: none; }
 .shelf { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 30px 16px; padding: 22px 16px 6px; background: repeating-linear-gradient(to bottom, transparent 0, transparent calc(100% - 14px), var(--wood) calc(100% - 14px)); background-color: var(--band); box-shadow: var(--edge); margin: 4px; }
 
-/* 숲 마을 (위에서 본 자유 이동 맵) */
-.vcam { position: relative; height: clamp(340px, 66vh, 600px); overflow: hidden; box-shadow: var(--edge); background: #7C9F48; touch-action: none; cursor: pointer; margin: 4px; }
-.vworld { position: absolute; left: 0; top: 0; transform-origin: 0 0; image-rendering: pixelated; will-change: transform; }
-.vworld img, .vworld svg { image-rendering: pixelated; display: block; user-select: none; -webkit-user-drag: none; }
-.vlayer { position: absolute; left: 0; top: 0; }
-.vitem { position: absolute; pointer-events: none; }
-.vb { position: absolute; background: none; border: 0; padding: 0; cursor: pointer; font: inherit; color: inherit; }
-.vb:hover { filter: brightness(1.1); }
-.vb:focus-visible { box-shadow: 0 0 0 6px #FFE27A, 0 0 0 12px #2B1D12 !important; }
-.vb.soon > img, .vb.soon > svg { filter: grayscale(.4) brightness(.96); }
-.vsign { position: absolute; left: 50%; bottom: -46px; transform: translateX(-50%); white-space: nowrap; display: flex; align-items: center; gap: 10px; background: var(--bg); color: var(--navy); border: 5px solid var(--navy); box-shadow: 0 7px 0 rgba(43, 29, 18, .35); padding: 5px 16px 5px 6px; font-size: 24px; font-weight: 700; line-height: 1.2; }
-.vsign .vno { display: grid; place-items: center; width: 34px; height: 34px; background: var(--brown); color: #fff; font-size: 16px; flex: none; }
-.vb.soon .vsign { background: #E4DFD2; color: #6B6254; } .vb.soon .vno { background: #9A8F7C; }
-.vtag { position: absolute; left: 50%; top: -42px; transform: translateX(-50%); background: var(--yellow); color: var(--navy); border: 4px solid var(--navy); padding: 0 12px; font-size: 18px; font-weight: 700; white-space: nowrap; }
-.vprompt { position: absolute; left: 50%; top: -58px; transform: translateX(-50%); display: none; align-items: center; gap: 8px; background: var(--bg); color: var(--navy); border: 4px solid var(--navy); font-size: 20px; padding: 2px 12px; white-space: nowrap; animation: vbob .8s steps(2) infinite; }
-.vprompt .key { background: #fff; border: 3px solid var(--navy); padding: 0 8px; box-shadow: inset 0 -3px 0 var(--cream-sh); font-size: 18px; }
-.vb.near .vprompt { display: flex; } .vb.soon.near .vtag { display: none; }
-.vactor { position: absolute; left: 0; top: 0; pointer-events: none; will-change: transform; }
-.vspr.real { background-repeat: no-repeat; image-rendering: pixelated; }
-.vplayer.walking .vspr.real { animation: vwalk .6s steps(4) infinite; }
-.vplayer.walking .vspr.fake { animation: vhop .28s steps(2) infinite; }
-.vspr.fake svg { filter: drop-shadow(3px 0 0 #2B1D12) drop-shadow(-3px 0 0 #2B1D12) drop-shadow(0 3px 0 #2B1D12) drop-shadow(0 -3px 0 #2B1D12); }
-.vshadow { position: absolute; left: 50%; bottom: -4px; width: 54%; height: 12px; margin-left: -27%; background: rgba(0, 0, 0, .22); }
-.vhint { position: absolute; left: 12px; bottom: 10px; background: var(--bg); color: var(--navy); font-size: .78rem; padding: 2px 10px; border: 3px solid var(--navy); z-index: 9000; }
-.vmini { position: absolute; right: 12px; top: 12px; width: 120px; height: 75px; border: 4px solid var(--navy); background: #7C9F48; z-index: 9000; opacity: .92; }
-.vmini i { position: absolute; width: 8px; height: 8px; background: #fff; border: 2px solid var(--navy); transform: translate(-50%, -50%); }
-.vmini b { position: absolute; width: 8px; height: 8px; background: var(--brown); transform: translate(-50%, -50%); }
-@keyframes vwalk { to { background-position-x: calc(var(--sw) * -1); } }
-@keyframes vhop { 50% { margin-top: -6px; } }
-@keyframes vbob { 50% { margin-top: -4px; } }
-@media (prefers-reduced-motion: reduce) { * { transition: none !important; } .vplayer.walking .vspr, .vprompt { animation: none !important; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 @media (hover: none) { .vhint { display: none; } }
 @media (max-width: 600px) {
   h1 { font-size: 1.35rem; } .cover-lg { width: 120px; } .hero h1 { font-size: 1.8rem; }
@@ -137,5 +107,64 @@ dialog::backdrop { background: rgba(24, 16, 10, .62); }
 }
 main:focus, main:focus-visible { box-shadow: none !important; outline: none; }
 
-.vwarm { position: absolute; inset: 0; pointer-events: none; z-index: 8000; background: linear-gradient(rgba(255, 186, 120, .16), rgba(255, 160, 90, .06)); mix-blend-mode: multiply; }
-.vglow { position: absolute; width: 180px; height: 180px; pointer-events: none; z-index: 3; background: radial-gradient(circle, rgba(255, 214, 120, .5), rgba(255, 214, 120, 0) 65%); mix-blend-mode: screen; }
+
+/* ===== 광장 (zip 프로토타입의 숲 마을 지도) ===== */
+.plaza { position: relative; width: calc(100% - 8px); margin: 4px; aspect-ratio: 16 / 9; max-height: 640px; overflow: hidden; box-shadow: var(--edge); background: #355E3B; user-select: none; cursor: pointer; touch-action: manipulation; container-type: inline-size; }
+.pmap { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; pointer-events: none; }
+.pwarm { position: absolute; inset: 0; background: rgba(120, 70, 20, .06); pointer-events: none; }
+.vpin { position: absolute; transform: translate(-50%, -50%); z-index: 20; display: flex; flex-direction: column; align-items: center; gap: 2px; background: none; border: 0; padding: 0; font: inherit; cursor: pointer; color: var(--navy); }
+.vpin .vsign { position: static; transform: none; display: flex; align-items: center; gap: 6px; background: var(--bg); color: var(--navy); border: 3px solid var(--navy); box-shadow: 0 4px 0 rgba(43, 29, 18, .4); padding: 2px 10px 2px 3px; font-size: clamp(.62rem, 1.9cqw, 1rem); font-weight: 700; line-height: 1.25; white-space: nowrap; }
+.vsign .vno { display: grid; place-items: center; min-width: 1.5em; height: 1.5em; background: var(--brown); color: #fff; font-size: .8em; flex: none; }
+.vsub { background: rgba(43, 29, 18, .75); color: #fff; font-size: clamp(.5rem, 1.3cqw, .7rem); padding: 0 6px; }
+.vpin.soon .vsign { background: #E4DFD2; color: #6B6254; } .vpin.soon .vno { background: #9A8F7C; }
+.vpin:hover .vsign, .vpin.near .vsign { background: #fff; transform: translateY(-2px); }
+.vpin:focus-visible { box-shadow: 0 0 0 4px #FFE27A, 0 0 0 8px #2B1D12 !important; }
+.vprompt { display: none; align-items: center; gap: 6px; background: var(--navy); color: #fff; font-size: clamp(.55rem, 1.5cqw, .8rem); padding: 1px 8px; white-space: nowrap; animation: vbob .8s steps(2) infinite; }
+.vprompt .key { background: #fff; color: var(--navy); padding: 0 5px; }
+.vpin.near .vprompt { display: flex; }
+.vdoor { position: absolute; width: 1.4%; aspect-ratio: 1; background: rgba(255, 200, 90, .85); transform: translate(-50%, -50%); pointer-events: none; z-index: 5; box-shadow: 0 0 0 3px rgba(255, 200, 90, .35); animation: vpulse 1.4s steps(3) infinite; }
+.vactor { position: absolute; transform: translate(-50%, -100%); z-index: 30; pointer-events: none; display: flex; flex-direction: column; align-items: center; }
+.vplayer { height: 15%; aspect-ratio: 14 / 21; }
+.vspr { width: 100%; flex: 1; min-height: 0; } .vspr .avsvg { width: 100%; height: 100%; display: block; filter: drop-shadow(2px 0 0 #2B1D12) drop-shadow(-2px 0 0 #2B1D12) drop-shadow(0 2px 0 #2B1D12) drop-shadow(0 -2px 0 #2B1D12); }
+.vplayer.walking .vspr { animation: vhop .28s steps(2) infinite; }
+.vname { background: rgba(43, 29, 18, .85); color: #FFE9A8; font-size: clamp(.5rem, 1.4cqw, .72rem); padding: 0 8px; white-space: nowrap; margin-bottom: 2px; }
+.vshadow { position: absolute; left: 12%; right: 12%; bottom: -3%; height: 8%; background: rgba(0, 0, 0, .28); z-index: -1; }
+.vhint { position: absolute; left: 10px; bottom: 8px; background: var(--bg); color: var(--navy); font-size: .74rem; padding: 2px 10px; border: 3px solid var(--navy); z-index: 40; }
+.pstatus { margin: 6px 4px 0; min-height: 52px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+@keyframes vhop { 50% { margin-bottom: 4px; } } @keyframes vbob { 50% { margin-top: -3px; } } @keyframes vpulse { 50% { opacity: .35; } }
+@media (hover: none) { .vhint { display: none; } }
+
+/* ===== 내비게이션 ===== */
+.pts { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; margin: 4px; background: var(--yellow); color: var(--navy); font-weight: 700; box-shadow: var(--edge); text-decoration: none; min-height: 34px; }
+.pts .coin { width: 14px; height: 14px; background: #B7791F; box-shadow: inset 0 0 0 3px #F6D56B; flex: none; }
+.me-chip { display: inline-flex; align-items: center; gap: 8px; color: var(--navy); text-decoration: none; padding: 0 6px; }
+.me-chip .avmini { width: 26px; height: 34px; flex: none; } .me-chip .avmini .avsvg { width: 100%; height: 100%; }
+#nav .sp { flex: 1 1 8px; }
+#nav { align-items: center; }
+
+/* ===== 대도서관 배너 / 전시관 / 상점 ===== */
+.hero-lib { position: relative; min-height: 190px; margin: 4px; padding: 26px 24px; color: #fff; box-shadow: var(--edge); background: #3a2a1c center / cover no-repeat; overflow: hidden; }
+.hero-lib::before { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(30, 20, 10, .92), rgba(30, 20, 10, .55) 60%, rgba(30, 20, 10, .15)); }
+.hero-lib > * { position: relative; } .hero-lib h1 { color: #fff; margin: 6px 0; } .hero-lib p { margin: 0; max-width: 34em; color: #F0E4CC; font-family: var(--sans); }
+.hero-lib .badge { background: var(--yellow); color: var(--navy); border-color: var(--navy); }
+.gal { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 20px 16px; }
+.gcard { display: flex; flex-direction: column; background: #fff; border: 4px solid var(--navy); box-shadow: 0 6px 0 rgba(43, 29, 18, .3); text-decoration: none; color: var(--navy); }
+.gcard:hover { background: var(--sky-soft); }
+.gcard .gimg { aspect-ratio: 4 / 3; background: var(--band) center / cover; border-bottom: 4px solid var(--navy); display: grid; place-items: center; color: var(--muted); overflow: hidden; }
+.gcard .gimg img { width: 100%; height: 100%; object-fit: cover; image-rendering: auto; }
+.gcard .gb { padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; } .gcard h3 { margin: 0; font-size: .98rem; }
+.gcard .gm { font-size: .78rem; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; }
+.shop-grid { display: grid; grid-template-columns: minmax(220px, 300px) 1fr; gap: 20px; align-items: start; }
+.avprev { background: var(--sky-bands, #BFE3A0); display: grid; place-items: end center; height: 280px; border: 4px solid var(--navy); position: relative; overflow: hidden; background: linear-gradient(#F6CFA9 0 40%, #7C9F48 40%); }
+.avprev .avsvg { height: 200px; width: auto; margin-bottom: 18px; filter: drop-shadow(3px 0 0 #2B1D12) drop-shadow(-3px 0 0 #2B1D12) drop-shadow(0 3px 0 #2B1D12) drop-shadow(0 -3px 0 #2B1D12); }
+.items { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+.item { background: #fff; border: 4px solid var(--navy); padding: 10px; display: flex; flex-direction: column; gap: 6px; box-shadow: inset 0 -6px 0 var(--cream-sh); }
+.item .ic { font-size: 1.6rem; line-height: 1; } .item p { margin: 0; font-size: .82rem; color: var(--muted); font-family: var(--sans); }
+.item.on { background: #EAF6D8; }
+.skins { display: flex; gap: 8px; margin-top: 8px; } .skin { width: 34px; height: 34px; border: 0; box-shadow: var(--edge); margin: 4px; cursor: pointer; } .skin[aria-pressed="true"] { box-shadow: 0 0 0 4px var(--navy), 0 0 0 8px var(--green); }
+.pick { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 14px; }
+.pick .book[aria-pressed="true"] .cover { outline: 6px solid var(--green); }
+@media (max-width: 700px) { .shop-grid { grid-template-columns: 1fr; } .me-chip .nm { display: none; } }
+.hero-map { background-size: cover; background-position: center 35%; }
+.hero-map::before { content: ""; position: absolute; inset: 0; background: rgba(251, 244, 226, .18); z-index: 1; }
+@media (min-width: 760px) { #nav { flex-wrap: nowrap; gap: 2px; } #nav a, #nav button { padding: 4px 9px; white-space: nowrap; } .me-chip .nm { max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } }

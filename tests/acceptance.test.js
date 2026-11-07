@@ -13,8 +13,8 @@ test('1. 관심 분야 선택/건너뛰기 후 시작', async () => {
   const s = await setup();
   const a = await s.mk('앨리스');
   assert.equal(a.user.onboarded, false);
-  let r = await a.patch('/api/me', { nickname: '앨리스', interests: ['판타지', 'SF', '없는분야'] });
-  assert.deepEqual(r.data.user.interests, ['판타지', 'SF']);
+  let r = await a.patch('/api/me', { nickname: '앨리스', interests: ['소설', '철학', '없는분야'] });
+  assert.deepEqual(r.data.user.interests, ['소설', '철학']);
   assert.equal(r.data.user.onboarded, true);
   const b = await s.mk('밥');
   r = await b.patch('/api/me', { nickname: '밥' }); // 건너뛰기
@@ -22,7 +22,7 @@ test('1. 관심 분야 선택/건너뛰기 후 시작', async () => {
   const rec = await b.get('/api/books/recommended');
   assert.ok(rec.data.books.length >= 8, '관심 분야 없이도 기본 목록');
   const rec2 = await a.get('/api/books/recommended');
-  assert.ok(['판타지', 'SF'].includes(rec2.data.books[0].category));
+  assert.ok(['소설', '철학'].includes(rec2.data.books[0].category));
   await s.close();
 });
 

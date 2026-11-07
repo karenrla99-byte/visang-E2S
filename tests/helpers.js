@@ -5,7 +5,7 @@ import path from 'node:path';
 
 export async function startServer(opts = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'bookrest-'));
-  const app = createApp({ dbPath: ':memory:', uploadDir: dir, googleBooks: false, ...opts });
+  const app = createApp({ dbPath: ':memory:', uploadDir: dir, googleBooks: false, demo: false, ...opts });
   const server = await new Promise((r) => { const s = app.listen(0, () => r(s)); });
   const base = `http://127.0.0.1:${server.address().port}`;
   const close = () => new Promise((r) => server.close(() => { app.locals.close(); fs.rmSync(dir, { recursive: true, force: true }); r(); }));

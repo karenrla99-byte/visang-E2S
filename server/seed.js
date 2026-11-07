@@ -1,6 +1,11 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import { fileURLToPath } from 'node:url';
+const DEMO_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'demo');
 // 1차 MVP 기본 카탈로그. 외부 도서 API가 없거나 실패해도 탐색/검색이 동작하도록 한다.
 // cover는 Open Library ISBN 표지를 사용하며, 로드 실패 시 화면에서 자동 생성 표지로 대체한다.
-export const CATEGORIES = ['소설', '시·에세이', '판타지', 'SF', '미스터리', '로맨스', '인문', '과학', '자기계발', '역사', '청소년', '만화·웹툰', '기타'];
+export const CATEGORIES = ['고전문학', '인문학', '철학', '소설', '사회/역사', '과학/예술', '기타'];
 
 const b = (isbn, title, author, publisher, category, description) => ({ isbn, title, author, publisher, category, description });
 
@@ -51,13 +56,57 @@ export const SEED_BOOKS = [
 ];
 export const seedCover = (isbn) => (isbn ? `https://covers.openlibrary.org/b/isbn/${isbn}-M.jpg?default=false` : '');
 
+// 이전 카테고리 → 현재 카테고리
+const CLASSICS = new Set(['변신', '위대한 개츠비', '오만과 편견', '프랑켄슈타인', '이상한 나라의 앨리스', '앵무새 죽이기', '호밀밭의 파수꾼', '토지', '삼국지', '난장이가 쏘아올린 작은 공', '향수', '어린 왕자', '죄와 벌']);
+const MAP = { '시·에세이': '인문학', 판타지: '소설', SF: '소설', 미스터리: '소설', 로맨스: '소설', 청소년: '소설', 인문: '인문학', 과학: '과학/예술', 자기계발: '인문학', 역사: '사회/역사', '만화·웹툰': '과학/예술' };
+const mapCategory = (title, cat) => (CLASSICS.has(title) ? '고전문학' : MAP[cat] || cat);
+
 export function seedBooks(db) {
-  const n = db.prepare('SELECT COUNT(*) c FROM books').get().c;
-  if (n > 0) return;
-  const ins = db.prepare(`INSERT OR IGNORE INTO books (external_id, isbn, title, author, publisher, cover_url, description, category, source)
-    VALUES (?,?,?,?,?,?,?,?, 'seed')`);
-  SEED_BOOKS.forEach((k, i) => {
-    if (k.title.includes('(원서)')) return;
-    ins.run(`seed:${i}`, k.isbn || null, k.title, k.author, k.publisher, seedCover(k.isbn), k.description, k.category);
-  });
+  const demo = JSON.parse(fs.readFileSync(path.join(DEMO_DIR, 'seed.json'), 'utf8'));
+  const zipTitles = new Set(demo.SEED_BOOKS.map((b) => b.title));
+  const ins = db.prepare(`INSERT OR IGNORE INTO books (external_id, isbn, title, author, publisher, cover_url, description, category, source, translator, tags, published_year, page_count)
+    VALUES (?,?,?,?,?,?,?,?, 'seed', ?,?,?,?)`);
+  if (db.prepare('SELECT COUNT(*) c FROM books').get().c === 0) {
+    SEED_BOOKS.forEach((k, i) => {
+      if (k.title.includes('(원서)') || zipTitles.has(k.title)) return;
+      ins.run(`seed:${i}`, k.isbn || null, k.title, k.author, k.publisher, seedCover(k.isbn), k.description, mapCategory(k.title, k.category), '', '[]', null, null);
+    });
+  }
+  for (const b of demo.SEED_BOOKS) { // 프로토타입의 큐레이션 도서 (없을 때만 추가)
+    ins.run(`zip:${b.id}`, b.isbn || null, b.title, b.author, b.publisher || '', b.coverUrl || '', b.description || '', b.category, b.translator || '', JSON.stringify(b.tags || []), b.publishedYear ?? null, b.pageCount ?? null);
+  }
+}
+
+const KIND_OF = { fanart: 'fanart', goods: 'goods', spinoff: 'sidestory', webtoon: 'webtoon', etc: 'other' };
+
+/** 미리보기용 데모 데이터: 다른 독자 3명과 그들의 공개 기록(팬아트·서평·한 줄 평). DB가 비어 있을 때만 넣는다. */
+export function seedDemo(db, uploadDir) {
+  if (db.prepare('SELECT COUNT(*) c FROM users').get().c > 0) return;
+  const demo = JSON.parse(fs.readFileSync(path.join(DEMO_DIR, 'seed.json'), 'utf8'));
+  const bookId = (zipId) => db.prepare('SELECT id FROM books WHERE external_id = ?').get(`zip:${zipId}`)?.id;
+  const uid = {};
+  db.exec('BEGIN');
+  try {
+    for (const u of demo.DEMO_OTHER_USERS) {
+      uid[u.id] = db.prepare(`INSERT INTO users (provider, provider_id, nickname, interests, onboarded, points, inventory, avatar, bio) VALUES ('demo',?,?,?,1,?,?,?,?)`)
+        .run(u.id, u.nickname, JSON.stringify(u.interestedCategories), u.points, JSON.stringify(u.inventory), JSON.stringify(u.avatar), u.bio).lastInsertRowid;
+      for (const b of u.interestedBookIds) { const id = bookId(b); if (id) db.prepare('INSERT OR IGNORE INTO shelf (user_id, book_id) VALUES (?,?)').run(uid[u.id], id); }
+    }
+    const insC = db.prepare(`INSERT INTO contents (user_id, book_id, kind, title, body, visibility, created_at, updated_at, published_at, base_likes) VALUES (?,?,?,?,?,?,?,?,?,?)`);
+    const insA = db.prepare('INSERT INTO attachments (content_id, stored_name, mime, size, alt, external_url) VALUES (?,?,?,?,?,?)');
+    for (const r of demo.INITIAL_RECORDS) {
+      const u = uid[r.userId]; const b = bookId(r.bookId); if (!u || !b) continue;
+      const kind = r.type === 'creation' ? KIND_OF[r.creationCategory] || 'other' : r.type === 'review' ? 'review' : 'oneline';
+      const at = r.createdAt.replace('T', ' ').replace('Z', '');
+      const id = insC.run(u, b, kind, r.title || '', r.content || '', r.isPublic ? 'public' : 'private', at, at, r.isPublic ? at : null, r.likesCount || 0).lastInsertRowid;
+      if (r.imageUrl) {
+        if (r.imageUrl.startsWith('http')) insA.run(id, '', 'image/jpeg', 0, r.title, r.imageUrl);
+        else { // 번들된 데모 이미지를 업로드 폴더로 복사
+          const src = path.join(DEMO_DIR, r.imageUrl.includes('demian') ? 'demian.jpg' : 'prince.jpg'); const name = `${crypto.randomUUID()}.jpg`;
+          fs.copyFileSync(src, path.join(uploadDir, name)); insA.run(id, name, 'image/jpeg', fs.statSync(src).size, r.title, '');
+        }
+      }
+    }
+    db.exec('COMMIT');
+  } catch (e) { db.exec('ROLLBACK'); throw e; }
 }

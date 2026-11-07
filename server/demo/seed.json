@@ -1,0 +1,534 @@
+{
+ "SEED_BOOKS": [
+  {
+   "id": "book_demian",
+   "title": "데미안",
+   "author": "헤르만 헤세",
+   "translator": "전영애",
+   "publisher": "민음사",
+   "coverUrl": "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=600",
+   "category": "고전문학",
+   "tags": [
+    "성장",
+    "자아",
+    "철학",
+    "고전",
+    "청춘",
+    "내면"
+   ],
+   "description": "“새는 알을 깨고 나온다. 알은 세계다. 태어나려는 자는 하나의 세계를 파괴해야 한다.” 참된 자아를 찾아 떠나는 싱클레어의 고뇌와 영혼의 안내자 데미안과의 운명적 만남을 그린 헤르만 헤세의 불멸의 명작.",
+   "publishedYear": 1919,
+   "isbn": "9788937460449",
+   "pageCount": 244
+  },
+  {
+   "id": "book_little_prince",
+   "title": "어린 왕자",
+   "author": "앙투안 드 생텍쥐페리",
+   "translator": "김화영",
+   "publisher": "열린책들",
+   "coverUrl": "https://images.unsplash.com/photo-1532012164546-f432f2e3777f?auto=format&fit=crop&q=80&w=600",
+   "category": "고전문학",
+   "tags": [
+    "동화",
+    "관계",
+    "사랑",
+    "철학",
+    "순수",
+    "고전"
+   ],
+   "description": "“가장 중요한 것은 눈에 보이지 않아. 마음으로 보아야만 분명하게 볼 수 있어.” 사막에 불시착한 조종사와 B612 행성에서 온 어린 왕자가 나누는 가슴 시린 대화와 길들임의 미학.",
+   "publishedYear": 1943,
+   "isbn": "9788932917245",
+   "pageCount": 160
+  },
+  {
+   "id": "book_sapiens",
+   "title": "사피엔스",
+   "author": "유발 하라리",
+   "translator": "조현욱",
+   "publisher": "김영사",
+   "coverUrl": "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?auto=format&fit=crop&q=80&w=600",
+   "category": "인문학",
+   "tags": [
+    "인류사",
+    "진화",
+    "역사",
+    "문명",
+    "과학",
+    "사유"
+   ],
+   "description": "변방의 유인원 호모 사피엔스는 어떻게 지구의 지배자가 되었는가? 인지혁명, 농업혁명, 과학혁명을 거쳐 신이 되려는 사피엔스의 과거와 미래를 날카롭게 통찰한 전 세계적인 인문 베스트셀러.",
+   "publishedYear": 2015,
+   "isbn": "9788934972464",
+   "pageCount": 636
+  },
+  {
+   "id": "book_justice",
+   "title": "정의란 무엇인가",
+   "author": "마이클 샌델",
+   "translator": "이창신",
+   "publisher": "와이즈베리",
+   "coverUrl": "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&q=80&w=600",
+   "category": "철학",
+   "tags": [
+    "정의",
+    "윤리",
+    "공동체",
+    "자유",
+    "정치철학",
+    "도덕"
+   ],
+   "description": "하버드대 최고 명강의! 공리주의, 자유지상주의, 칸트의 도덕 이론, 롤스의 평등론, 아리스토텔레스의 미덕론을 넘나들며 현대 사회의 복잡한 딜레마를 마주하는 철학적 나침반.",
+   "publishedYear": 2014,
+   "isbn": "9788937834790",
+   "pageCount": 440
+  },
+  {
+   "id": "book_stranger",
+   "title": "이방인",
+   "author": "알베르 카뮈",
+   "translator": "김화영",
+   "publisher": "민음사",
+   "coverUrl": "https://images.unsplash.com/photo-1457369804613-52c61a468e7d?auto=format&fit=crop&q=80&w=600",
+   "category": "고전문학",
+   "tags": [
+    "부조리",
+    "실존",
+    "고전",
+    "인간본성",
+    "자유"
+   ],
+   "description": "“오늘 엄마가 죽었다. 아니 어쩌면 어제.” 지중해의 눈부신 태양 아래 일어난 우발적 살인과 재판을 통해 세상의 위선과 삶의 부조리를 온몸으로 거부한 뫼르소의 영원한 실존주의 명작.",
+   "publishedYear": 1942,
+   "isbn": "9788937462665",
+   "pageCount": 280
+  },
+  {
+   "id": "book_crime_punishment",
+   "title": "죄와 벌",
+   "author": "표도르 도스토옙스키",
+   "translator": "홍대화",
+   "publisher": "열린책들",
+   "coverUrl": "https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&q=80&w=600",
+   "category": "고전문학",
+   "tags": [
+    "죄의식",
+    "구원",
+    "인간심리",
+    "고전",
+    "러시아문학"
+   ],
+   "description": "비범인은 인류의 구원을 위해 범죄를 저지를 권리가 있는가? 상트페테르부르크의 가난한 대학생 라스콜리니코프의 살인과 내면의 파멸, 그리고 소냐의 숭고한 사랑을 통한 영혼의 부활.",
+   "publishedYear": 1866,
+   "isbn": "9788932906188",
+   "pageCount": 880
+  },
+  {
+   "id": "book_cosmos",
+   "title": "코스모스",
+   "author": "칼 세이건",
+   "translator": "홍승수",
+   "publisher": "사이언스북스",
+   "coverUrl": "https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?auto=format&fit=crop&q=80&w=600",
+   "category": "과학/예술",
+   "tags": [
+    "우주",
+    "천문학",
+    "과학",
+    "생명",
+    "인류",
+    "경이"
+   ],
+   "description": "“우리는 모두 별의 먼지(Starstuff)로 이루어졌다.” 150억 광년의 시공간을 가로지르는 우주 대서사시이자, 지적 생명체로서 인류가 지닌 호기심과 사랑에 바치는 가장 시적인 과학 교양서.",
+   "publishedYear": 2006,
+   "isbn": "9788983711892",
+   "pageCount": 712
+  },
+  {
+   "id": "book_unbearable_lightness",
+   "title": "참을 수 없는 존재의 가벼움",
+   "author": "밀란 쿤데라",
+   "translator": "이송은",
+   "publisher": "민음사",
+   "coverUrl": "https://images.unsplash.com/photo-1476275466078-4007374efbbe?auto=format&fit=crop&q=80&w=600",
+   "category": "소설",
+   "tags": [
+    "사랑",
+    "실존",
+    "철학",
+    "역사",
+    "가벼움과무거움"
+   ],
+   "description": "키치와 역사의 소용돌이 속에서 영원한 회귀와 단 한 번뿐인 인생의 무게를 묻는다. 토마시, 테레자, 사비나, 프란츠 네 남녀의 얽힌 사랑과 삶의 실존적 탐구.",
+   "publishedYear": 1984,
+   "isbn": "9788937462344",
+   "pageCount": 512
+  }
+ ],
+ "DEMO_OTHER_USERS": [
+  {
+   "id": "user_stellar",
+   "nickname": "별빛서재",
+   "email": "stellar@bookrest.demo",
+   "bio": "고전문학의 아름다운 문장들을 일러스트와 굿즈로 재해석합니다 ✨",
+   "interestedCategories": [
+    "고전문학",
+    "철학",
+    "과학/예술"
+   ],
+   "interestedBookIds": [
+    "book_demian",
+    "book_little_prince",
+    "book_cosmos"
+   ],
+   "avatar": {
+    "skin": "#F8D7DA",
+    "hat": "hat_beret",
+    "outfit": "outfit_cardigan",
+    "accessory": "acc_quill"
+   },
+   "points": 820,
+   "inventory": [
+    "hat_beret",
+    "outfit_cardigan",
+    "acc_quill"
+   ],
+   "hasCompletedOnboarding": true,
+   "joinedAt": "2026-10-12"
+  },
+  {
+   "id": "user_philos",
+   "nickname": "사유하는숲",
+   "email": "philos@bookrest.demo",
+   "bio": "인문학과 사회철학을 읽고 우리 시대의 딜레마를 함께 고민하는 공간입니다.",
+   "interestedCategories": [
+    "인문학",
+    "철학",
+    "사회/역사"
+   ],
+   "interestedBookIds": [
+    "book_sapiens",
+    "book_justice",
+    "book_crime_punishment"
+   ],
+   "avatar": {
+    "skin": "#FFEAA7",
+    "hat": "hat_scholar",
+    "outfit": "outfit_cape",
+    "accessory": "acc_bookrest"
+   },
+   "points": 640,
+   "inventory": [
+    "hat_scholar",
+    "outfit_cape",
+    "acc_bookrest"
+   ],
+   "hasCompletedOnboarding": true,
+   "joinedAt": "2026-10-18"
+  },
+  {
+   "id": "user_camus",
+   "nickname": "지중해의바람",
+   "email": "camus@bookrest.demo",
+   "bio": "실존주의 문학과 웹툰 콘티를 그리는 창작자입니다.",
+   "interestedCategories": [
+    "고전문학",
+    "소설"
+   ],
+   "interestedBookIds": [
+    "book_stranger",
+    "book_unbearable_lightness"
+   ],
+   "avatar": {
+    "skin": "#FDCAE1",
+    "hat": "hat_cap",
+    "outfit": "outfit_casual",
+    "accessory": "acc_glasses"
+   },
+   "points": 490,
+   "inventory": [
+    "hat_cap",
+    "outfit_casual"
+   ],
+   "hasCompletedOnboarding": true,
+   "joinedAt": "2026-10-25"
+  }
+ ],
+ "INITIAL_RECORDS": [
+  {
+   "id": "rec_demian_01",
+   "bookId": "book_demian",
+   "userId": "user_stellar",
+   "userNickname": "별빛서재",
+   "type": "creation",
+   "creationCategory": "fanart",
+   "title": "새는 알을 뚫고 아브락사스를 향해 날아오른다",
+   "content": "“새는 신에게로 날아간다. 그 신의 이름은 아브락사스다.”\n알이라는 안락한 유년의 세계를 스스로 부수고 나온 자만이 진정한 자기 자신과 만날 수 있다는 구절에 깊은 감명을 받아 디지털 수채화로 그렸습니다. 황금빛 날개와 별빛이 쏟아지는 밤하늘은 싱클레어가 마주한 거대한 내면의 우주를 상징합니다.",
+   "imageUrl": "/src/assets/images/bookrest_creative_demian_1794026495309.jpg",
+   "isPublic": true,
+   "likesCount": 42,
+   "createdAt": "2026-10-20T14:30:00Z"
+  },
+  {
+   "id": "rec_demian_02",
+   "bookId": "book_demian",
+   "userId": "user_philos",
+   "userNickname": "사유하는숲",
+   "type": "review",
+   "title": "두 세계의 경계에 서서 나를 묻다",
+   "content": "헤세는 빛의 세계와 어둠의 세계라는 이분법을 넘어, 선과 악 모두를 포괄하는 신 ‘아브락사스’를 제시한다. 현대 사회를 살아가는 우리 역시 사회가 규정한 모범이라는 껍질 속에 갇혀 있지 않은가? 싱클레어가 데미안을 통해 배운 가장 위대한 진리는 결국 타인의 모방이 아닌 자신의 내면에 귀 기울이는 용기였다.",
+   "isPublic": true,
+   "likesCount": 18,
+   "createdAt": "2026-10-21T09:15:00Z"
+  },
+  {
+   "id": "rec_demian_03",
+   "bookId": "book_demian",
+   "userId": "user_camus",
+   "userNickname": "지중해의바람",
+   "type": "one_line",
+   "title": "",
+   "content": "자기 자신에게 이르는 길이야말로 세상에서 가장 험난하지만 가장 가치 있는 여정.",
+   "isPublic": true,
+   "likesCount": 15,
+   "createdAt": "2026-10-22T18:40:00Z"
+  },
+  {
+   "id": "rec_prince_01",
+   "bookId": "book_little_prince",
+   "userId": "user_stellar",
+   "userNickname": "별빛서재",
+   "type": "creation",
+   "creationCategory": "goods",
+   "title": "B612 소행성과 여우 금속 뱃지 & 우드 책갈피 기획",
+   "content": "어린 왕자가 소중히 품었던 단 하나의 장미와 여우와의 길들임의 약속을 간직할 수 있는 문구 굿즈 세트입니다.\n\n• 황동 금속 칠 뱃지: B612 행성 위 어린 왕자와 밤하늘의 금박 별자리\n• 천연 월넛 우드 책갈피: “네가 오후 네 시에 온다면, 난 세 시부터 행복해지기 시작할 거야” 캘리그라피 각인과 스웨이드 태슬\n\n독서할 때마다 어린 시절의 순수한 마음을 떠올릴 수 있도록 따뜻한 질감으로 디자인했습니다.",
+   "imageUrl": "/src/assets/images/bookrest_creative_prince_1794026496423.jpg",
+   "isPublic": true,
+   "likesCount": 38,
+   "createdAt": "2026-10-23T11:20:00Z"
+  },
+  {
+   "id": "rec_prince_02",
+   "bookId": "book_little_prince",
+   "userId": "user_camus",
+   "userNickname": "지중해의바람",
+   "type": "review",
+   "title": "어른이 되어 다시 만난 사막의 우물",
+   "content": "어린 시절에는 그저 신비로운 동화로 읽혔던 어린 왕자가, 삼십 대가 되어 다시 읽으니 눈물이 핑 돌았다. 어른들은 숫자를 좋아하고, 소유를 자랑하지만, 진정 소중한 것은 서로에게 시간을 쏟아 길들이는 관계 그 자체라는 것을. 사막이 아름다운 건 어딘가에 우물을 감추고 있기 때문이라는 말처럼.",
+   "isPublic": true,
+   "likesCount": 22,
+   "createdAt": "2026-10-24T16:05:00Z"
+  },
+  {
+   "id": "rec_prince_03",
+   "bookId": "book_little_prince",
+   "userId": "user_philos",
+   "userNickname": "사유하는숲",
+   "type": "one_line",
+   "title": "",
+   "content": "내가 쏟은 시간만이 나의 장미를 세상에 하나뿐인 존재로 만든다.",
+   "isPublic": true,
+   "likesCount": 29,
+   "createdAt": "2026-10-25T13:30:00Z"
+  },
+  {
+   "id": "rec_sapiens_01",
+   "bookId": "book_sapiens",
+   "userId": "user_philos",
+   "userNickname": "사유하는숲",
+   "type": "creation",
+   "creationCategory": "fanart",
+   "title": "상상의 질서(Imagined Order) - 인류 문명의 3대 혁명 비주얼 맵",
+   "content": "사피엔스가 지구의 먹이사슬 정점에 서게 된 비결은 바로 ‘허구(Fiction)’를 믿는 능력이었다는 유발 하라리의 명제를 펜화 인포그래픽으로 시각화했습니다. 인지혁명의 동굴 벽화에서 화폐와 제국, 현대의 실리콘 알고리즘까지 한눈에 연결되는 문명의 궤적입니다.",
+   "imageUrl": "https://images.unsplash.com/photo-1507842229451-7f01be8f5043?auto=format&fit=crop&q=80&w=600",
+   "isPublic": true,
+   "likesCount": 26,
+   "createdAt": "2026-10-26T10:10:00Z"
+  },
+  {
+   "id": "rec_sapiens_02",
+   "bookId": "book_sapiens",
+   "userId": "user_philos",
+   "userNickname": "사유하는숲",
+   "type": "review",
+   "title": "우리는 무엇을 원하기를 원하는가",
+   "content": "농업혁명을 ‘역사상 최대의 사기극’으로 규정하는 대담한 시선부터 생명공학과 인공지능으로 호모 데우스로의 진화를 예고하는 마지막 장까지, 책장을 덮고 나면 인간이라는 종에 대한 근원적 질문 앞에 서게 된다.",
+   "isPublic": true,
+   "likesCount": 19,
+   "createdAt": "2026-10-27T15:40:00Z"
+  },
+  {
+   "id": "rec_sapiens_03",
+   "bookId": "book_sapiens",
+   "userId": "user_stellar",
+   "userNickname": "별빛서재",
+   "type": "one_line",
+   "title": "",
+   "content": "우리가 믿는 국가, 돈, 종교는 모두 위대한 허구의 힘 위에 세워졌다.",
+   "isPublic": true,
+   "likesCount": 14,
+   "createdAt": "2026-10-28T09:20:00Z"
+  },
+  {
+   "id": "rec_justice_01",
+   "bookId": "book_justice",
+   "userId": "user_philos",
+   "userNickname": "사유하는숲",
+   "type": "creation",
+   "creationCategory": "spinoff",
+   "title": "현대 자율주행 알고리즘 관점의 트롤리 딜레마 극본",
+   "content": "철로를 달리는 전차의 선로를 바꿀 것인가? 샌델 교수의 대표적 윤리 실험을 2026년 완전자율주행차의 긴급회피 알고리즘 회의실을 배경으로 각색한 단편 드라마 스크립트입니다. 5명의 보행자와 1명의 탑승객 사이에서 프로그램은 과연 누구의 생명을 우선해야 하는가?",
+   "isPublic": true,
+   "likesCount": 23,
+   "createdAt": "2026-10-29T14:50:00Z"
+  },
+  {
+   "id": "rec_justice_02",
+   "bookId": "book_justice",
+   "userId": "user_philos",
+   "userNickname": "사유하는숲",
+   "type": "one_line",
+   "title": "",
+   "content": "정의는 단순히 계산된 효용의 총합이 아니라, 함께 고민하는 미덕의 탐구다.",
+   "isPublic": true,
+   "likesCount": 17,
+   "createdAt": "2026-10-30T11:00:00Z"
+  },
+  {
+   "id": "rec_stranger_01",
+   "bookId": "book_stranger",
+   "userId": "user_camus",
+   "userNickname": "지중해의바람",
+   "type": "creation",
+   "creationCategory": "webtoon",
+   "title": "알제 해변의 정오, 타는 듯한 태양의 콘티 4컷",
+   "content": "“그것은 칼날에서 뿜어져 나오는 번뜩이는 불길처럼 내 이마를 찔렀다.”\n뫼르소가 방아쇠를 당길 수밖에 없었던 태양의 광열과 바다의 숨결을 거친 흑백 먹선 톤으로 담아낸 단편 웹툰 도입부 4컷 콘티입니다.",
+   "imageUrl": "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&q=80&w=600",
+   "isPublic": true,
+   "likesCount": 31,
+   "createdAt": "2026-10-31T17:15:00Z"
+  },
+  {
+   "id": "rec_stranger_02",
+   "bookId": "book_stranger",
+   "userId": "user_camus",
+   "userNickname": "지중해의바람",
+   "type": "review",
+   "title": "거짓을 거부한 영혼의 최후 진술",
+   "content": "사회가 요구하는 거짓 감정을 연기하지 않았다는 이유로 살인자가 아닌 영혼 없는 괴물로 재판받는 뫼르소. 그는 마지막 순간 세상의 다정한 무관심을 받아들이며 참된 자유를 얻는다.",
+   "isPublic": true,
+   "likesCount": 16,
+   "createdAt": "2026-11-01T12:00:00Z"
+  },
+  {
+   "id": "rec_cosmos_01",
+   "bookId": "book_cosmos",
+   "userId": "user_stellar",
+   "userNickname": "별빛서재",
+   "type": "creation",
+   "creationCategory": "goods",
+   "title": "‘창백한 푸른 점’ 홀로그램 우주 엽서 & 코스터",
+   "content": "보이저 1호가 60억 킬로미터 밖에서 촬영한 지구의 미세한 점. 그 빛나는 점 위에 인류의 모든 희로애락이 담겨 있다는 칼 세이건의 헌사를 홀로그램 포일과 자개 인쇄로 담아낸 굿즈 샘플입니다.",
+   "imageUrl": "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&q=80&w=600",
+   "isPublic": true,
+   "likesCount": 33,
+   "createdAt": "2026-11-02T13:45:00Z"
+  },
+  {
+   "id": "rec_cosmos_02",
+   "bookId": "book_cosmos",
+   "userId": "user_stellar",
+   "userNickname": "별빛서재",
+   "type": "one_line",
+   "title": "",
+   "content": "우주는 우리 안에 있고, 우리는 자신을 알아가려는 우주 그 자체다.",
+   "isPublic": true,
+   "likesCount": 20,
+   "createdAt": "2026-11-03T10:30:00Z"
+  }
+ ],
+ "INITIAL_SHOP_ITEMS": [
+  {
+   "id": "hat_scholar",
+   "name": "학사모와 월계관",
+   "slot": "hat",
+   "price": 150,
+   "icon": "🎓",
+   "color": "#4B5563",
+   "description": "고전을 깊이 탐독한 지적인 독자의 상징."
+  },
+  {
+   "id": "hat_beret",
+   "name": "화가의 벨벳 베레모",
+   "slot": "hat",
+   "price": 180,
+   "icon": "🎨",
+   "color": "#9F1239",
+   "description": "따뜻한 와인빛 2차 창작 예술가의 모자."
+  },
+  {
+   "id": "hat_crown",
+   "name": "어린 왕자의 금빛 관",
+   "slot": "hat",
+   "price": 300,
+   "icon": "👑",
+   "color": "#D97706",
+   "description": "소행성 B612의 영원한 왕자님 스타일."
+  },
+  {
+   "id": "outfit_cardigan",
+   "name": "가을 숲 니트 가디건",
+   "slot": "outfit",
+   "price": 200,
+   "icon": "🧶",
+   "color": "#78350F",
+   "description": "서재에서 책 읽을 때 가장 포근한 니트."
+  },
+  {
+   "id": "outfit_cape",
+   "name": "사서의 고서점 망토",
+   "slot": "outfit",
+   "price": 250,
+   "icon": "🧥",
+   "color": "#1E3A8A",
+   "description": "대도서관 깊은 서고를 지키는 사서의 제복."
+  },
+  {
+   "id": "outfit_pilot",
+   "name": "사막 비행사 레더 자켓",
+   "slot": "outfit",
+   "price": 280,
+   "icon": "✈️",
+   "color": "#92400E",
+   "description": "어린 왕자를 찾아 사막을 횡단하는 탐험가 복장."
+  },
+  {
+   "id": "acc_quill",
+   "name": "은빛 깃펜과 잉크병",
+   "slot": "accessory",
+   "price": 120,
+   "icon": "✒️",
+   "color": "#6B7280",
+   "description": "영감이 떠오를 때마다 문장을 새기는 필기도구."
+  },
+  {
+   "id": "acc_bookrest",
+   "name": "황동 회전 독서대",
+   "slot": "accessory",
+   "price": 160,
+   "icon": "📖",
+   "color": "#B45309",
+   "description": "두꺼운 고전 소설도 편안하게 거치하는 고급 북레스트."
+  },
+  {
+   "id": "acc_rose",
+   "name": "유리병 속 붉은 장미",
+   "slot": "accessory",
+   "price": 220,
+   "icon": "🌹",
+   "color": "#DC2626",
+   "description": "세상에 단 하나뿐인 길들여진 장미꽃."
+  }
+ ]
+}

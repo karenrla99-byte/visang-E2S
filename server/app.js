@@ -5,7 +5,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { openDb } from './db.js';
-import { seedBooks, CATEGORIES } from './seed.js';
+import { seedBooks, seedDemo, CATEGORIES } from './seed.js';
+import { SHOP_ITEMS, SKINS, DEFAULT_AVATAR, DEFAULT_INVENTORY } from './shop.js';
 import { searchGoogleBooks, cacheBooks } from './books.js';
 import { oauthRoutes, enabledProviders } from './oauth.js';
 
@@ -24,6 +25,11 @@ export const KINDS = {
 };
 const CREATIVE_KINDS = Object.keys(KINDS).filter((k) => KINDS[k].creative);
 const CREATIVE_SQL = CREATIVE_KINDS.map((k) => `'${k}'`).join(',');
+// 창작 전시관 필터: 프로토타입의 5분류를 우리 종류에 묶는다
+export const GALLERY_GROUPS = {
+  fanart: ['fanart'], goods: ['goods'], spinoff: ['sidestory', 'webnovel'], webtoon: ['webtoon'], etc: ['cosplay', 'other'],
+};
+export const REWARDS = { onboarding: 200, shelf: 50, oneline: 30, review: 70, creative: 120 };
 export const REPORT_REASONS = ['저작권 침해', '개인정보·초상권 침해', '성인물', '괴롭힘·혐오', '불법·유해', '스팸', '기타'];
 
 export const LIMITS = { maxImageBytes: 5 * 1024 * 1024, maxImages: 4, titleMax: 100, bodyMax: 10000, onelineMax: 300, nicknameMax: 20 };
@@ -50,10 +56,12 @@ export function createApp(opts = {}) {
     adminUsers: (opts.adminUsers ?? process.env.ADMIN_USERS ?? '').split(',').map((s) => s.trim()).filter(Boolean),
     baseUrl: opts.baseUrl ?? process.env.BASE_URL ?? 'http://localhost:3000',
     secureCookie: process.env.NODE_ENV === 'production',
+    demo: opts.demo ?? (process.env.SEED_DEMO ? process.env.SEED_DEMO !== '0' : process.env.NODE_ENV !== 'production'),
   };
   fs.mkdirSync(cfg.uploadDir, { recursive: true });
   const db = openDb(cfg.dbPath);
   seedBooks(db);
+  if (cfg.demo) seedDemo(db, cfg.uploadDir);
 
   const app = express();
   app.disable('x-powered-by');
@@ -67,7 +75,14 @@ export function createApp(opts = {}) {
   // ---------- 세션/인증 ----------
   const cookies = (req) => Object.fromEntries((req.headers.cookie || '').split(';').map((c) => c.trim().split('=')).filter((p) => p[0]).map(([k, ...v]) => [k, decodeURIComponent(v.join('='))]));
   const userRow = (id) => db.prepare('SELECT * FROM users WHERE id = ?').get(id);
-  const publicUser = (u) => u && { id: u.id, nickname: u.nickname, interests: JSON.parse(u.interests), role: u.role, onboarded: !!u.onboarded };
+  const publicUser = (u) => u && { id: u.id, nickname: u.nickname, interests: JSON.parse(u.interests), role: u.role, onboarded: !!u.onboarded, points: u.points, inventory: JSON.parse(u.inventory), avatar: JSON.parse(u.avatar), bio: u.bio };
+  /** 포인트 지급. (kind, ref)당 한 번만 지급되어 반복으로 늘릴 수 없다. 지급액을 돌려준다(이미 받았으면 0). */
+  const award = (userId, kind, ref, delta) => {
+    const r = db.prepare('INSERT OR IGNORE INTO point_log (user_id, kind, ref, delta) VALUES (?,?,?,?)').run(userId, kind, String(ref), delta);
+    if (!r.changes) return 0;
+    db.prepare('UPDATE users SET points = points + ? WHERE id = ?').run(delta, userId);
+    return delta;
+  };
 
   function startSession(res, userId) {
     const token = crypto.randomBytes(32).toString('hex');
@@ -97,8 +112,8 @@ export function createApp(opts = {}) {
     let u = db.prepare('SELECT * FROM users WHERE provider = ? AND provider_id = ?').get(provider, providerId);
     const isAdmin = cfg.adminUsers.includes(`${provider}:${providerId}`) || (provider === 'dev' && providerId === 'admin');
     if (!u) {
-      const id = db.prepare('INSERT INTO users (provider, provider_id, nickname, role) VALUES (?,?,?,?)')
-        .run(provider, providerId, (nickname || '독자').slice(0, LIMITS.nicknameMax), isAdmin ? 'admin' : 'user').lastInsertRowid;
+      const id = db.prepare('INSERT INTO users (provider, provider_id, nickname, role, inventory, avatar) VALUES (?,?,?,?,?,?)')
+        .run(provider, providerId, (nickname || '독자').slice(0, LIMITS.nicknameMax), isAdmin ? 'admin' : 'user', JSON.stringify(DEFAULT_INVENTORY), JSON.stringify(DEFAULT_AVATAR)).lastInsertRowid;
       u = userRow(id);
     } else if (isAdmin && u.role !== 'admin') {
       db.prepare("UPDATE users SET role = 'admin' WHERE id = ?").run(u.id);
@@ -142,8 +157,42 @@ export function createApp(opts = {}) {
     const u = req.user;
     const nickname = req.body.nickname !== undefined ? cleanNickname(req.body.nickname) : u.nickname;
     const interests = req.body.interests !== undefined ? cleanInterests(req.body.interests) : JSON.parse(u.interests);
+    const first = !u.onboarded;
     db.prepare('UPDATE users SET nickname = ?, interests = ?, onboarded = 1 WHERE id = ?').run(nickname, JSON.stringify(interests), u.id);
-    res.json({ user: publicUser(userRow(u.id)) });
+    let bonus = 0;
+    if (first) { // 온보딩: 고른 책을 서재에 담고 보상 지급
+      const ids = Array.isArray(req.body.bookIds) ? req.body.bookIds.slice(0, 6) : [];
+      for (const id of ids) if (bookRow(id)) db.prepare('INSERT OR IGNORE INTO shelf (user_id, book_id) VALUES (?,?)').run(u.id, Number(id));
+      bonus = award(u.id, 'onboarding', 'done', REWARDS.onboarding);
+    }
+    res.json({ user: publicUser(userRow(u.id)), bonus });
+  }));
+
+  // 꾸미기 상점
+  app.get('/api/shop', requireUser, (req, res) => res.json({ items: SHOP_ITEMS, skins: SKINS, points: req.user.points, inventory: JSON.parse(req.user.inventory), avatar: JSON.parse(req.user.avatar) }));
+  app.post('/api/shop/buy', requireUser, wrap((req, res) => {
+    const item = SHOP_ITEMS.find((i) => i.id === req.body?.itemId);
+    if (!item) throw err(404, '없는 아이템입니다.');
+    const inv = JSON.parse(req.user.inventory);
+    if (inv.includes(item.id)) throw err(400, '이미 가지고 있는 아이템입니다.');
+    // 포인트가 모자라면 조건부 UPDATE가 실패한다(동시 요청에도 음수가 되지 않음)
+    const r = db.prepare('UPDATE users SET points = points - ? WHERE id = ? AND points >= ?').run(item.price, req.user.id, item.price);
+    if (!r.changes) throw err(400, `포인트가 부족해요. (필요 ${item.price}P)`, 'not_enough_points');
+    inv.push(item.id);
+    db.prepare('UPDATE users SET inventory = ? WHERE id = ?').run(JSON.stringify(inv), req.user.id);
+    res.json({ user: publicUser(userRow(req.user.id)), message: `${item.name}을(를) 샀어요!` });
+  }));
+  app.put('/api/me/avatar', requireUser, wrap((req, res) => {
+    const inv = JSON.parse(req.user.inventory); const cur = JSON.parse(req.user.avatar); const body = req.body || {};
+    const next = { skin: SKINS.includes(body.skin) ? body.skin : cur.skin || DEFAULT_AVATAR.skin };
+    for (const slot of ['hat', 'outfit', 'accessory']) {
+      const id = body[slot]; if (!id) continue; // 비우면 해제
+      const item = SHOP_ITEMS.find((i) => i.id === id);
+      if (!item || item.slot !== slot || !inv.includes(id)) throw err(400, '가지고 있지 않은 아이템이에요.');
+      next[slot] = id;
+    }
+    db.prepare('UPDATE users SET avatar = ? WHERE id = ?').run(JSON.stringify(next), req.user.id);
+    res.json({ user: publicUser(userRow(req.user.id)) });
   }));
 
   // AUTH-04: 계정 삭제. 본인 기록·파일·좋아요·책장을 즉시 삭제한다(법적 보관 의무는 정책 확정 후 조정).
@@ -193,7 +242,9 @@ export function createApp(opts = {}) {
 
   // LIB-03: 관심 분야 도서를 상단에, 부족하면 기본 목록으로 보완
   app.get('/api/books/recommended', requireUser, (req, res) => {
-    const interests = JSON.parse(req.user.interests);
+    // 온보딩 중에는 아직 저장 전인 선택 분야(?categories=)로도 추천한다
+    const asked = String(req.query.categories || '').split(',').filter((c) => CATEGORIES.includes(c));
+    const interests = asked.length ? asked : JSON.parse(req.user.interests);
     const matched = interests.length
       ? db.prepare(`SELECT * FROM books WHERE category IN (${interests.map(() => '?').join(',')}) ORDER BY id LIMIT 12`).all(...interests) : [];
     let books = matched;
@@ -208,14 +259,14 @@ export function createApp(opts = {}) {
 
   // ---------- 콘텐츠 가시성 ----------
   const hydrate = (rows, viewer) => rows.map((c) => {
-    const atts = db.prepare('SELECT id, alt FROM attachments WHERE content_id = ? ORDER BY id').all(c.id);
-    const likes = db.prepare('SELECT COUNT(*) n FROM likes WHERE content_id = ?').get(c.id).n;
+    const atts = db.prepare('SELECT id, alt, external_url FROM attachments WHERE content_id = ? ORDER BY id').all(c.id);
+    const likes = c.base_likes + db.prepare('SELECT COUNT(*) n FROM likes WHERE content_id = ?').get(c.id).n;
     const liked = viewer ? !!db.prepare('SELECT 1 FROM likes WHERE content_id = ? AND user_id = ?').get(c.id, viewer.id) : false;
-    const author = db.prepare('SELECT id, nickname FROM users WHERE id = ?').get(c.user_id);
+    const au = db.prepare('SELECT id, nickname, avatar FROM users WHERE id = ?').get(c.user_id); const author = au && { id: au.id, nickname: au.nickname, avatar: JSON.parse(au.avatar) };
     return {
       id: c.id, book_id: c.book_id, kind: c.kind, kind_label: KINDS[c.kind]?.label, creative: !!KINDS[c.kind]?.creative,
-      title: c.title, body: c.body, visibility: c.visibility, hidden: !!c.hidden, created_at: c.created_at, published_at: c.published_at,
-      attachments: atts.map((a) => ({ id: a.id, alt: a.alt, url: `/api/files/${a.id}` })), likes, liked, author,
+      title: c.title, body: c.body, visibility: c.visibility, hidden: !!c.hidden, created_at: c.created_at, published_at: c.published_at, book_title: bookRow(c.book_id)?.title,
+      attachments: atts.map((a) => ({ id: a.id, alt: a.alt, url: a.external_url || `/api/files/${a.id}` })), likes, liked, author,
       mine: viewer?.id === c.user_id,
     };
   });
@@ -228,13 +279,12 @@ export function createApp(opts = {}) {
     if (!book) throw err(404, '책을 찾을 수 없습니다.');
     const inShelf = !!db.prepare('SELECT 1 FROM shelf WHERE user_id = ? AND book_id = ?').get(req.user.id, book.id);
     // BOOK-05: 좋아요 1개 이상, 좋아요 많은 순, 동점이면 먼저 공개된 작품, 상위 3
-    const top = db.prepare(`SELECT c.*, COUNT(l.user_id) n FROM contents c JOIN likes l ON l.content_id = c.id
-      WHERE c.book_id = ? AND ${isPublicVisible} AND c.kind IN (${CREATIVE_SQL})
-      GROUP BY c.id HAVING n >= 1 ORDER BY n DESC, c.published_at ASC, c.id ASC LIMIT 3`).all(book.id);
+    const top = db.prepare(`SELECT * FROM (SELECT c.*, c.base_likes + (SELECT COUNT(*) FROM likes l WHERE l.content_id = c.id) n FROM contents c
+      WHERE c.book_id = ? AND ${isPublicVisible} AND c.kind IN (${CREATIVE_SQL})) WHERE n >= 1 ORDER BY n DESC, published_at ASC, id ASC LIMIT 3`).all(book.id);
     const counts = Object.fromEntries(['oneline', 'review', 'creative'].map((t) => [t, db.prepare(
       `SELECT COUNT(*) n FROM contents c WHERE c.book_id = ? AND ${isPublicVisible} AND ${t === 'creative' ? `c.kind IN (${CREATIVE_SQL})` : 'c.kind = ?'}`,
     ).get(...(t === 'creative' ? [book.id] : [book.id, t])).n]));
-    res.json({ book, inShelf, top: hydrate(top, req.user), counts });
+    res.json({ book: { ...book, tags: JSON.parse(book.tags || '[]') }, inShelf, top: hydrate(top, req.user), counts });
   }));
 
   app.get('/api/books/:id/contents', requireUser, wrap((req, res) => {
@@ -243,14 +293,14 @@ export function createApp(opts = {}) {
     const offset = Math.max(0, parseInt(req.query.offset) || 0);
     const kindSql = tab === 'creative' ? `c.kind IN (${CREATIVE_SQL})` : `c.kind = '${tab}'`;
     const order = sort === 'likes' ? 'n DESC, c.published_at ASC' : 'c.published_at DESC, c.id DESC';
-    const rows = db.prepare(`SELECT c.*, (SELECT COUNT(*) FROM likes l WHERE l.content_id = c.id) n FROM contents c
+    const rows = db.prepare(`SELECT c.*, c.base_likes + (SELECT COUNT(*) FROM likes l WHERE l.content_id = c.id) n FROM contents c
       WHERE c.book_id = ? AND ${isPublicVisible} AND ${kindSql} ORDER BY ${order} LIMIT 20 OFFSET ?`).all(req.params.id, offset);
     res.json({ contents: hydrate(rows, req.user), hasMore: rows.length === 20 });
   }));
 
   // ---------- 내 책장 ----------
   app.get('/api/shelf', requireUser, (req, res) => {
-    const rows = db.prepare(`SELECT b.*, s.created_at added_at,
+    const rows = db.prepare(`SELECT b.*, s.created_at added_at, s.status,
       (SELECT COUNT(*) FROM contents c WHERE c.book_id = b.id AND c.user_id = s.user_id) total,
       (SELECT COUNT(*) FROM contents c WHERE c.book_id = b.id AND c.user_id = s.user_id AND c.visibility = 'public' AND c.hidden = 0) pub
       FROM shelf s JOIN books b ON b.id = s.book_id WHERE s.user_id = ? ORDER BY s.id DESC`).all(req.user.id);
@@ -260,7 +310,15 @@ export function createApp(opts = {}) {
     const book = bookRow(req.body?.bookId);
     if (!book) throw err(404, '책을 찾을 수 없습니다.');
     const r = db.prepare('INSERT OR IGNORE INTO shelf (user_id, book_id) VALUES (?,?)').run(req.user.id, book.id);
-    res.status(r.changes ? 201 : 200).json({ added: !!r.changes, alreadyInShelf: !r.changes });
+    const points = r.changes ? award(req.user.id, 'shelf', book.id, REWARDS.shelf) : 0;
+    res.status(r.changes ? 201 : 200).json({ added: !!r.changes, alreadyInShelf: !r.changes, points });
+  }));
+  app.patch('/api/shelf/:bookId', requireUser, wrap((req, res) => {
+    const status = req.body?.status;
+    if (!['reading', 'completed', 'want_to_read'].includes(status)) throw err(400, '읽기 상태가 올바르지 않습니다.');
+    const r = db.prepare('UPDATE shelf SET status = ? WHERE user_id = ? AND book_id = ?').run(status, req.user.id, Number(req.params.bookId));
+    if (!r.changes) throw err(404, '책장에 없는 책입니다.');
+    res.json({ ok: true, status });
   }));
   // SHELF-07: records=keep(기록은 비공개로 보관) | delete(기록도 삭제) — 선택은 사용자가 한다.
   app.delete('/api/shelf/:bookId', requireUser, wrap((req, res) => {
@@ -284,7 +342,8 @@ export function createApp(opts = {}) {
     const inShelf = !!db.prepare('SELECT 1 FROM shelf WHERE user_id = ? AND book_id = ?').get(req.user.id, book.id);
     if (!inShelf) throw err(404, '내 책장에 없는 책입니다.');
     const rows = db.prepare('SELECT * FROM contents WHERE user_id = ? AND book_id = ? ORDER BY id DESC').all(req.user.id, book.id);
-    res.json({ book, contents: hydrate(rows, req.user) });
+    const status = db.prepare('SELECT status FROM shelf WHERE user_id = ? AND book_id = ?').get(req.user.id, book.id).status;
+    res.json({ book, status, contents: hydrate(rows, req.user) });
   }));
 
   // ---------- 콘텐츠 작성/수정/삭제 ----------
@@ -341,7 +400,8 @@ export function createApp(opts = {}) {
         VALUES (?,?,?,?,?,?, ${f.visibility === 'public' ? "datetime('now')" : 'NULL'})`).run(req.user.id, book.id, f.kind, f.title, f.text, f.visibility).lastInsertRowid;
       saveImages(files, id, getAlts(req.body));
       db.exec('COMMIT');
-      res.status(201).json({ content: hydrate([db.prepare('SELECT * FROM contents WHERE id = ?').get(id)], req.user)[0] });
+      const points = award(req.user.id, 'content', id, KINDS[f.kind].creative ? REWARDS.creative : REWARDS[f.kind]);
+      res.status(201).json({ content: hydrate([db.prepare('SELECT * FROM contents WHERE id = ?').get(id)], req.user)[0], points });
     } catch (e) { db.exec('ROLLBACK'); throw e; }
   }));
 
@@ -416,7 +476,7 @@ export function createApp(opts = {}) {
     if (!c || c.visibility !== 'public' || c.hidden) throw err(404, '공개된 작품이 아닙니다.');
     return c;
   }
-  const likeState = (c, u) => ({ likes: db.prepare('SELECT COUNT(*) n FROM likes WHERE content_id = ?').get(c.id).n, liked: !!db.prepare('SELECT 1 FROM likes WHERE content_id = ? AND user_id = ?').get(c.id, u.id) });
+  const likeState = (c, u) => ({ likes: c.base_likes + db.prepare('SELECT COUNT(*) n FROM likes WHERE content_id = ?').get(c.id).n, liked: !!db.prepare('SELECT 1 FROM likes WHERE content_id = ? AND user_id = ?').get(c.id, u.id) });
   app.put('/api/contents/:id/like', requireUser, wrap((req, res) => {
     const c = likeTarget(req);
     if (c.user_id === req.user.id) throw err(400, '내 작품에는 좋아요를 누를 수 없습니다.');
@@ -429,6 +489,16 @@ export function createApp(opts = {}) {
     res.json(likeState(c, req.user));
   }));
 
+  // ---------- 창작 전시관: 모든 책의 공개 2차 창작물 ----------
+  app.get('/api/gallery', requireUser, wrap((req, res) => {
+    const group = GALLERY_GROUPS[req.query.category]; const kinds = (group || CREATIVE_KINDS).map((k) => `'${k}'`).join(',');
+    const sort = req.query.sort === 'latest' ? 'latest' : 'popular'; const offset = Math.max(0, parseInt(req.query.offset) || 0);
+    const order = sort === 'popular' ? 'n DESC, published_at DESC, id DESC' : 'published_at DESC, id DESC';
+    const rows = db.prepare(`SELECT * FROM (SELECT c.*, c.base_likes + (SELECT COUNT(*) FROM likes l WHERE l.content_id = c.id) n FROM contents c
+      WHERE ${isPublicVisible} AND c.kind IN (${kinds})) ORDER BY ${order} LIMIT 24 OFFSET ?`).all(offset);
+    res.json({ contents: hydrate(rows, req.user), hasMore: rows.length === 24 });
+  }));
+
   // ---------- 다른 사용자의 서재 (공개 콘텐츠만) ----------
   app.get('/api/users/:id', requireUser, wrap((req, res) => {
     const u = userRow(req.params.id);
@@ -438,7 +508,7 @@ export function createApp(opts = {}) {
     const out = books.map((b) => ({
       ...b, contents: hydrate(db.prepare(`SELECT c.* FROM contents c WHERE c.user_id = ? AND c.book_id = ? AND ${isPublicVisible} ORDER BY c.published_at DESC`).all(u.id, b.id), req.user),
     }));
-    res.json({ user: { id: u.id, nickname: u.nickname }, books: out, isMe: u.id === req.user.id });
+    res.json({ user: { id: u.id, nickname: u.nickname, bio: u.bio, avatar: JSON.parse(u.avatar) }, books: out, isMe: u.id === req.user.id });
   }));
 
   // ---------- 신고 / 운영 ----------
