@@ -37,23 +37,29 @@ export function avatarSvg(avatar = {}, face = 'down', px) {
 // ---------- 이미지 스프라이트(선택) ----------
 // public/assets/avatar/character-walk.png (4열×4행: 행 = 아래·왼쪽·오른쪽·위, 열 = 걷기 4프레임)이 있으면 코드 도트 대신 쓴다.
 // 상점 아이템은 같은 4×4 규격의 투명 PNG를 item-<아이템id>.png 로 두면 캐릭터 위에 겹쳐 그린다(없는 아이템은 겹치지 않는다).
-const SPR = { base: false, items: new Set() };
+const SPR = { base: false, items: new Set(), outfits: new Set() };
 const SPR_BASE = '/assets/avatar/character-walk.png'; // 전체 경로를 문자열로 둔다(단독 실행 빌드가 이 경로를 그림 데이터로 바꿔 넣는다)
-const itemUrl = (id) => asset(`/assets/avatar/item-${id}.png`);
+const itemUrl = (id) => asset(`/assets/avatar/item-${id}.png`);           // 모자·소품: 캐릭터 위에 겹치는 시트
+const outfitUrl = (id) => asset(`/assets/avatar/character-${id}.png`);     // 옷: 그 옷을 입고 그린 캐릭터 시트(몸 전체를 대신한다)
 const probe = (url) => new Promise((res) => { const i = new Image(); i.onload = () => res(true); i.onerror = () => res(false); i.src = url; });
+const OUTFITS = () => Object.keys(LOOK).filter((id) => id.startsWith('outfit_'));
 export async function loadSprites() {
   SPR.base = await probe(SPR_BASE);
-  SPR.items = new Set((await Promise.all(Object.keys(LOOK).map(async (id) => ((await probe(itemUrl(id))) ? id : null)))).filter(Boolean));
+  const ids = Object.keys(LOOK);
+  SPR.items = new Set((await Promise.all(ids.filter((id) => !id.startsWith('outfit_')).map(async (id) => ((await probe(itemUrl(id))) ? id : null)))).filter(Boolean));
+  SPR.outfits = new Set((await Promise.all(OUTFITS().map(async (id) => ((await probe(outfitUrl(id))) ? id : null)))).filter(Boolean));
   return SPR.base;
 }
 export const hasSprites = () => SPR.base;
-/** 이미지 캐릭터일 때 이 아이템의 겹침 그림이 있는지(없으면 착용해도 그림에는 안 나타난다) */
-export const hasItemSprite = (id) => SPR.items.has(id);
+/** 이미지 캐릭터일 때 이 아이템의 그림이 있는지(없으면 착용해도 그림에는 안 나타난다) */
+export const hasItemSprite = (id) => SPR.items.has(id) || SPR.outfits.has(id);
 const ROW = { down: 0, left: 1, right: 2, up: 3 };
 /** 스프라이트가 있으면 겹친 이미지, 없으면 코드 도트 SVG를 돌려준다. */
 export function avatarHtml(avatar = {}, face = 'down') {
   if (!SPR.base) return avatarSvg(avatar, face);
   const layer = (url) => `<i class="lay" style="background-image:url(${url})"></i>`;
-  const items = [avatar.outfit, avatar.hat, avatar.accessory].filter((id) => id && SPR.items.has(id)).map((id) => layer(itemUrl(id)));
-  return `<span class="spritebox" role="img" aria-label="내 캐릭터" style="--row:${ROW[face] ?? 0}">${layer(SPR_BASE)}${items.join('')}</span>`;
+  // 입은 옷의 캐릭터 시트가 있으면 기본 시트 대신 쓰고, 없으면 기본 시트 그대로(옷 그림이 오기 전까지는 덧칠하지 않는다)
+  const body = avatar.outfit && SPR.outfits.has(avatar.outfit) ? outfitUrl(avatar.outfit) : SPR_BASE;
+  const items = [avatar.hat, avatar.accessory].filter((id) => id && SPR.items.has(id)).map((id) => layer(itemUrl(id)));
+  return `<span class="spritebox" role="img" aria-label="내 캐릭터" style="--row:${ROW[face] ?? 0}">${layer(body)}${items.join('')}</span>`;
 }

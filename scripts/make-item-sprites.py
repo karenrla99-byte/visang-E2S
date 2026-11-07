@@ -1,4 +1,4 @@
-"""상점 아이템 그림 + 캐릭터 시트 → 캐릭터에 입히는 겹침 시트 public/assets/avatar/item-<id>.png (캐릭터와 같은 4×4 규격)
+"""상점 아이템 그림 + 캐릭터 시트 → 모자·소품 겹침 시트 public/assets/avatar/item-<id>.png (캐릭터와 같은 4×4 규격)
   python3 scripts/make-item-sprites.py
 모자·소품은 프레임마다 머리/몸 위치를 찾아 아이템 그림을 얹고, 옷은 셔츠 색만 바꾼다."""
 from PIL import Image
@@ -49,4 +49,5 @@ def make(item):
                         out[y, x] = [max(0, min(255, int(tr[0] * k))), max(0, min(255, int(tr[1] * k))), max(0, min(255, int(tr[2] * k))), 255]
                 sheet.alpha_composite(Image.fromarray(out), (c * FW, r * FH))
     sheet.save(f'public/assets/avatar/item-{item}.png'); print(item)
-for it in ['hat_scholar', 'hat_beret', 'hat_crown', 'outfit_cardigan', 'outfit_cape', 'outfit_pilot', 'acc_quill', 'acc_bookrest', 'acc_rose']: make(it)
+# 옷(outfit_*)은 덧칠하지 않고 '옷 입은 캐릭터 시트'(character-<id>.png)를 따로 그려 쓴다. 여기서는 모자·소품만 만든다.
+for it in ['hat_scholar', 'hat_beret', 'hat_crown', 'acc_quill', 'acc_bookrest', 'acc_rose']: make(it)
