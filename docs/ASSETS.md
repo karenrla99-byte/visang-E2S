@@ -258,4 +258,4 @@
 | `public/assets/shop/<아이템id>.png` ×9 | 상점 아이템 시트(모자·옷·소품) → 상점 카드 그림 | `python3 scripts/slice-assets.py <상점시트> <종류아이콘시트>` |
 | `public/assets/kinds/<종류>.png` ×9 | 종류 아이콘 시트(한 줄 평·서평·팬아트·굿즈·코스프레·외전·웹소설·웹툰·기타) → 탭·뱃지·작성 힌트 | 같은 스크립트 |
 | `public/assets/avatar/character-walk.png` | 캐릭터 4×4 시트(아래·왼쪽·오른쪽·위) | `python3 scripts/make-character-sheet.py <원본>` (머리 위 여유 포함) |
-| `public/assets/avatar/item-<id>.png` ×9 | 캐릭터에 입히는 겹침 시트(같은 4×4). 모자·소품은 프레임마다 머리/몸 위치에 아이템 그림을 얹고, 옷은 셔츠 색만 바꾼다 | `python3 scripts/make-item-sprites.py` |
+| `public/assets/avatar/item-<id>.png` ×9 | 캐릭터에 입히는 겹침 시트(같은 4×4). 모자·소품은 프레임마다 머리/몸 위치에 아이템 그림을 얹고, 옷은 몸통 영역(바지 시작 줄 위, 목 아래)을 한 가지 천 색으로 통째로 칠한다(머리카락·가방·바지는 제외). 셔츠 색을 색 값으로 가려내면 피부색과 겹쳐 얼룩이 생겨서 영역 방식으로 바꿨다 | `python3 scripts/make-item-sprites.py` |
