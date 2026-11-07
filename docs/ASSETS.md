@@ -298,3 +298,5 @@
 ```
 
 **확인 방법**: 파일 3개를 `public/assets/avatar/`에 같은 이름으로 넣고 새로고침하면, 상점에서 해당 옷을 입는 순간 마을과 미리보기의 캐릭터가 그 시트로 바뀝니다. 시트가 없는 옷은 상점에 "그림은 준비 중" 안내가 뜹니다.
+
+**반영 완료**: 세 옷 시트가 `public/assets/avatar/character-outfit_*.png`로 들어 있다. 다시 만들 때는 `python3 scripts/make-outfit-sheets.py outfit_cardigan=<그림> outfit_cape=<그림> outfit_pilot=<그림>` — 기본 시트와 같은 키·발 높이로 맞추고, 칸마다 머리 중심을 기본 시트와 같은 자리에 정렬해서 모자·소품이 어느 옷에서나 맞는다.
