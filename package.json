@@ -4,14 +4,20 @@
   "private": true,
   "description": "BookRest (북레스트) - 독서 기록과 창작물을 모으는 픽셀 도서관 웹앱 (1차 MVP)",
   "type": "module",
-  "engines": { "node": ">=22.13" },
+  "engines": {
+    "node": ">=22.13"
+  },
   "scripts": {
     "start": "node --no-warnings server/index.js",
     "dev": "node --no-warnings --watch server/index.js",
-    "test": "node --no-warnings --test tests/*.test.js"
+    "test": "node --no-warnings --test tests/*.test.js",
+    "build:standalone": "node --no-warnings scripts/build-standalone.mjs"
   },
   "dependencies": {
     "express": "^5.1.0",
     "multer": "^2.0.2"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
   }
 }

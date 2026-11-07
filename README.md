@@ -14,6 +14,14 @@ npm test             # PRD 10장 검수 기준 통합 테스트
 
 개발 모드에서는 입장 화면의 **개발용 간편 로그인**으로 바로 들어갈 수 있다(`운영자로 입장`은 신고 검토 화면용). 운영 배포 시 `NODE_ENV=production`이면 꺼진다.
 
+## 서버 없이 열리는 클릭용 HTML
+
+```bash
+npm run build:standalone     # dist/bookrest-standalone.html (약 2.3MB, 한 파일)
+```
+
+더블클릭으로 열면 된다(인터넷은 Unsplash 도서 표지에만 필요). 가짜 API(`public/mock-api.js`)가 브라우저 안에서 서버 역할을 하고, 데이터는 브라우저 저장소(localStorage)에 남는다. 서버의 규칙을 옮긴 것이라 포인트·상점·전시관·신고·운영 흐름이 모두 동작하지만, 다른 기기와 공유되지는 않는 시연용이다. 서버 규칙을 바꾸면 `mock-api.js`도 같이 고쳐야 한다.
+
 ## 환경 변수
 
 | 변수 | 설명 |

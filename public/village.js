@@ -1,6 +1,6 @@
 // 광장(마을 홈): 숲 마을 지도 위를 캐릭터가 걸어 다니고, 건물 입구에서 입장한다.
 // 지도 이미지는 public/assets/village/plaza-map.jpg. 건물 핀 위치는 지도 위 건물에 맞춘 % 좌표다.
-import { avatarHtml, hasSprites } from '/avatar.js';
+import { avatarHtml, hasSprites } from './avatar.js';
 
 const MAP_SRC = '/assets/village/plaza-map.jpg';
 const SPEED = 30;                         // % / 초

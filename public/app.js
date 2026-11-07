@@ -89,8 +89,8 @@ function renderNav() {
 async function refreshMe() { try { state.me = (await api('GET', '/api/me')).user; renderNav(); } catch { /* 표시용 갱신 실패는 무시 */ } }
 const pts = (n) => (n ? ` (+${n}P)` : '');
 
-import { mountVillage, BUILDINGS } from '/village.js';
-import { avatarSvg, avatarHtml, loadSprites, LOOK } from '/avatar.js';
+import { mountVillage, BUILDINGS } from './village.js';
+import { avatarSvg, avatarHtml, loadSprites, LOOK } from './avatar.js';
 
 const GALLERY_TABS = [['all', '전체'], ['fanart', '팬아트 일러스트'], ['goods', '굿즈 기획'], ['spinoff', '외전·패러렐 글'], ['webtoon', '웹툰 콘티'], ['etc', '기타']];
 const STATUS = { reading: '읽는 중', completed: '완독', want_to_read: '읽고 싶은' };
