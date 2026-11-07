@@ -43,6 +43,7 @@ const cover = (b, cls = '') => b.cover_url
   : h`<div class="cover ${cls}" role="img" aria-label="${b.title} 표지(자동 생성)" style="--cv:hsl(${hue(b.title)} 38% 38%)">${b.title}</div>`;
 document.addEventListener('error', (e) => { // 표지 로드 실패 → 자동 생성 표지, 작품 이미지 실패 → 안내
   const img = e.target;
+  if (img.tagName === 'IMG' && (img.classList.contains('kicon') || img.classList.contains('shopimg'))) { img.replaceWith(Object.assign(document.createElement('span'), { textContent: img.dataset.emoji || '' })); return; }
   if (img.tagName === 'IMG' && (img.closest?.('.gimg') || img.classList.contains('thumb'))) { const sp = document.createElement('span'); sp.className = 'small muted'; sp.style.cssText = 'padding:8px;text-align:center'; sp.textContent = '이미지를 불러오지 못했어요'; img.replaceWith(sp); return; }
   if (img.tagName !== 'IMG' || !img.classList.contains('cover')) return;
   const d = document.createElement('div');
@@ -55,6 +56,7 @@ const bookCard = (b, extra = '') => h`<a class="book" href="#/book/${b.id}">${co
 const loading = () => render(h`<p class="empty" role="status">불러오는 중…</p>`);
 const failure = (e, retry) => { render(h`<div class="empty card"><p class="err" role="alert">${e.message}</p><button class="btn" id="retry">다시 시도</button></div>`); $('#retry').onclick = retry; };
 const fmtDate = (s) => (s ? s.slice(0, 10) : '');
+const kindIcon = (k) => h`<img class="kicon" src="${asset('/assets/kinds/' + k + '.png')}" alt="" width="22" height="22">`;
 const kindLabel = (k) => state.cfg.kinds.find((x) => x.id === k)?.label || k;
 
 // ---------- 굿즈 펀딩(관심 표시) ----------
@@ -72,7 +74,7 @@ function workCard(c, { book } = {}) {
   return h`<article class="card work">
     ${img && h`<img class="thumb" src="${img.url}" alt="${img.alt || c.title + ' 이미지'}" loading="lazy">`}
     <div style="min-width:0;flex:1">
-      <div class="row"><span class="badge">${c.kind_label}</span>${c.mine && h`<span class="badge ${c.visibility === 'public' ? 'pub' : ''}">${c.visibility === 'public' ? '공개' : '비공개'}</span>`}${c.hidden && h`<span class="badge hid">숨김</span>`}</div>
+      <div class="row"><span class="badge">${kindIcon(c.kind)}${c.kind_label}</span>${c.mine && h`<span class="badge ${c.visibility === 'public' ? 'pub' : ''}">${c.visibility === 'public' ? '공개' : '비공개'}</span>`}${c.hidden && h`<span class="badge hid">숨김</span>`}</div>
       <h3><a href="#/work/${c.id}">${c.title || '(제목 없음)'}</a></h3>
       <p>${(c.intro || c.body || '').slice(0, 160)}${(c.intro || c.body || '').length > 160 ? '…' : ''}</p>
       ${c.funding && fundingBar(c.funding)}
@@ -103,6 +105,7 @@ const pts = (n) => (n ? ` (+${n}P)` : '');
 
 import { mountVillage, BUILDINGS } from './village.js';
 import { avatarSvg, avatarHtml, loadSprites, hasSprites, hasItemSprite, LOOK } from './avatar.js';
+import { asset } from './assets.js';
 
 const GALLERY_TABS = [['all', '전체'], ['fanart', '팬아트 일러스트'], ['goods', '굿즈 기획'], ['spinoff', '외전·패러렐 글'], ['webtoon', '웹툰 콘티'], ['etc', '기타']];
 const STATUS = { reading: '읽는 중', completed: '완독', want_to_read: '읽고 싶은' };
@@ -226,7 +229,7 @@ views.book = async ([id]) => {
       ${b.description && h`<p>${b.description}</p>`}
       <div class="row" id="act"></div></div></div>
     ${d.top.length > 0 && h`<section aria-labelledby="top"><h2 id="top" style="margin-top:24px">인기 작품 TOP ${d.top.length}</h2><div class="stack">${d.top.map((c, i) => h`<div class="row" style="flex-wrap:nowrap;align-items:flex-start"><span class="rank" aria-label="${i + 1}위">${i + 1}</span><div style="flex:1;min-width:0">${workCard(c)}</div></div>`)}</div></section>`}
-    <div class="tabs kindtabs" role="tablist" aria-label="이 책의 공개 기록(종류별)">${tabs.map(([k, l]) => h`<button class="tab" role="tab" id="t-${k}" aria-selected="${k === tab}" data-t="${k}">${l} <span class="small ${d.counts[k] ? '' : 'muted'}">${d.counts[k]}</span></button>`)}</div>
+    <div class="tabs kindtabs" role="tablist" aria-label="이 책의 공개 기록(종류별)">${tabs.map(([k, l]) => h`<button class="tab" role="tab" id="t-${k}" aria-selected="${k === tab}" data-t="${k}">${kindIcon(k)}${l} <span class="small ${d.counts[k] ? '' : 'muted'}">${d.counts[k]}</span></button>`)}</div>
     <div id="sortbar" class="row" hidden><span class="small muted">정렬</span><button class="chip" data-s="latest" aria-pressed="true">최신순</button><button class="chip" data-s="likes" aria-pressed="false">좋아요순</button></div>
     <div id="list" class="stack" role="tabpanel" style="margin-top:12px" aria-live="polite"></div><div id="more" class="row" style="justify-content:center;margin-top:12px"></div>`);
   const act = $('#act');
@@ -336,7 +339,7 @@ views.write = async ([bookId, contentId]) => {
   render(h`<a href="#/shelf/${book.id}">← ${book.title}</a>
     <form id="f" class="card stack" style="margin-top:12px" novalidate><h1>${existing ? '기록 수정' : '새 기록'}</h1>
       <div><label for="kind" style="margin-top:0">종류</label><select id="kind" ${existing && 'disabled'}>${state.cfg.kinds.map((k) => h`<option value="${k.id}" ${k.id === kind && 'selected'}>${k.label}${k.creative ? ' (2차 창작)' : ''}</option>`)}</select>
-        <p class="small muted" id="hint" style="margin:6px 0 0"></p></div>
+        <p class="small muted" id="hint" style="margin:6px 0 0;display:flex;align-items:center;gap:6px"><span id="hinticon"></span><span id="hinttext"></span></p></div>
       <div id="titlebox"><label for="title">제목 <span class="muted small" id="treq"></span></label><input id="title" maxlength="${L.titleMax}" value="${existing?.title || ''}"></div>
       <div id="imgbox" class="card"><label for="file" style="margin-top:0" id="imglabel">이미지</label>
         <p class="small muted" id="imgrule" style="margin:0 0 8px"></p>
@@ -358,7 +361,7 @@ views.write = async ([bookId, contentId]) => {
   const total = () => (existing ? existing.attachments.filter((a) => !removed.has(a.id)).length : 0) + files.length;
   const refresh = () => {
     kind = $('#kind').value; const t = tpl(); const label = info().label;
-    $('#hint').textContent = TPL_HINT[t];
+    $('#hinttext').textContent = TPL_HINT[t]; $('#hinticon').innerHTML = kindIcon(kind).s;
     $('#titlebox').hidden = false; $('#treq').textContent = t === 'line' ? '(선택)' : '(필수)';
     // 이미지칸: 이미지형(필수)·굿즈·기타(선택). 글형·한 줄 평·서평에는 없다.
     const imgOn = ['image', 'goods', 'mixed'].includes(t); $('#imgbox').hidden = !imgOn;
@@ -433,7 +436,7 @@ views.work = async ([id]) => {
   let d;
   try { d = await api('GET', `/api/contents/${id}`); } catch (e) { return failure(e, () => views.work([id])); }
   const c = d.content; const b = d.book;
-  render(h`<article class="card stack"><div class="row"><span class="badge">${c.kind_label}</span>${c.mine && h`<span class="badge ${c.visibility === 'public' ? 'pub' : ''}">${c.visibility === 'public' ? '공개' : '비공개'}</span>`}${c.hidden && h`<span class="badge hid">운영 정책으로 숨김</span>`}</div>
+  render(h`<article class="card stack"><div class="row"><span class="badge">${kindIcon(c.kind)}${c.kind_label}</span>${c.mine && h`<span class="badge ${c.visibility === 'public' ? 'pub' : ''}">${c.visibility === 'public' ? '공개' : '비공개'}</span>`}${c.hidden && h`<span class="badge hid">운영 정책으로 숨김</span>`}</div>
     <h1>${c.title || '(제목 없음)'}</h1>
     <p class="muted">원본 도서 <a href="#/book/${b.id}">${b.title}</a> · 작성자 <a href="#/user/${c.author.id}">${c.author.nickname}</a> · ${fmtDate(c.published_at || c.created_at)}</p>
     ${c.attachments.map((a) => h`<img src="${a.url}" alt="${a.alt || c.title + ' 이미지'}" style="border:2px solid var(--ink);max-height:70vh">`)}
@@ -483,7 +486,7 @@ views.funding = async (_, qs) => {
     <div id="out" style="margin-top:16px" aria-live="polite"><p class="empty">불러오는 중…</p></div>`);
   const out = $('#out'); const items = new Map(); let offset = 0; let first = true;
   const card = (c) => h`<article class="gcard fcard" data-id="${c.id}"><a class="gimg" href="#/work/${c.id}" style="display:grid;text-decoration:none;color:inherit">${c.attachments[0] ? h`<img src="${c.attachments[0].url}" alt="${c.attachments[0].alt || c.title}" loading="lazy">` : h`<span class="small" style="padding:12px;text-align:center">${(c.intro || c.body).slice(0, 80)}${(c.intro || c.body).length > 80 ? '…' : ''}</span>`}</a>
-    <div class="gb"><span class="badge" style="align-self:flex-start">굿즈 기획</span><h3><a href="#/work/${c.id}">${c.title || '(제목 없음)'}</a></h3><div class="gm"><span>원작 「${c.book_title}」</span><span>${c.author.nickname}</span></div>
+    <div class="gb"><span class="badge" style="align-self:flex-start">${kindIcon('goods')}굿즈 기획</span><h3><a href="#/work/${c.id}">${c.title || '(제목 없음)'}</a></h3><div class="gm"><span>원작 「${c.book_title}」</span><span>${c.author.nickname}</span></div>
     ${fundingBar(c.funding)}${c.funding.note && h`<p class="fnote small">${c.funding.note}</p>`}<div class="row">${interestBtn(c)}<a class="btn small secondary" href="#/work/${c.id}">자세히</a></div></div></article>`;
   const more = async () => {
     try {
@@ -508,7 +511,7 @@ views.gallery = async (_, qs) => {
     <div id="out" style="margin-top:18px" aria-live="polite"><p class="empty">불러오는 중…</p></div>`);
   const out = $('#out'); let offset = 0; let first = true;
   const card = (c) => h`<a class="gcard" href="#/work/${c.id}"><div class="gimg">${c.attachments[0] ? h`<img src="${c.attachments[0].url}" alt="${c.attachments[0].alt || c.title}" loading="lazy">` : h`<span class="small" style="padding:12px;text-align:center">${(c.intro || c.body).slice(0, 80)}${(c.intro || c.body).length > 80 ? '…' : ''}</span>`}</div>
-    <div class="gb"><span class="badge" style="align-self:flex-start">${c.kind_label}</span><h3>${c.title || '(제목 없음)'}</h3><div class="gm"><span>원작 「${c.book_title}」</span></div>${c.funding && fundingBar(c.funding)}<div class="gm"><span>${c.author.nickname}</span><span aria-label="좋아요 ${c.likes}개">♥ ${c.likes}</span></div></div></a>`;
+    <div class="gb"><span class="badge" style="align-self:flex-start">${kindIcon(c.kind)}${c.kind_label}</span><h3>${c.title || '(제목 없음)'}</h3><div class="gm"><span>원작 「${c.book_title}」</span></div>${c.funding && fundingBar(c.funding)}<div class="gm"><span>${c.author.nickname}</span><span aria-label="좋아요 ${c.likes}개">♥ ${c.likes}</span></div></div></a>`;
   const more = async () => {
     try {
       const r = await api('GET', `/api/gallery?${new URLSearchParams({ category: cat, sort, offset })}`);
@@ -534,7 +537,7 @@ views.shop = async () => {
         ${hasSprites() ? h`<div class="card small" style="margin-top:12px"><b>캐릭터 이미지 사용 중</b><br>피부색은 이미지 캐릭터에 적용되지 않아요.${missingLook(d.avatar).length > 0 && h`<p class="err" style="margin:8px 0 0">착용한 ${missingLook(d.avatar).map((i) => i.name).join(', ')}의 그림은 준비 중이라 캐릭터에는 아직 표시되지 않아요.</p>`}</div>` : h`<div class="card" style="margin-top:12px"><b class="small">피부색</b><div class="skins" role="group" aria-label="피부색">${d.skins.map((c) => h`<button type="button" class="skin" data-skin="${c}" style="background:${c}" aria-label="피부색 ${c}" aria-pressed="${d.avatar.skin === c}"></button>`)}</div></div>`}</div>
         <div class="stack">${slots.map(([slot, label]) => h`<section><h2>${label}</h2><div class="items">${d.items.filter((i) => i.slot === slot).map((i) => {
           const own = d.inventory.includes(i.id); const worn = d.avatar[slot] === i.id;
-          return h`<div class="item ${worn ? 'on' : ''}"><span class="ic" aria-hidden="true">${i.icon}</span><b>${i.name}</b><p>${i.description}</p>
+          return h`<div class="item ${worn ? 'on' : ''}"><span class="ic" aria-hidden="true"><img class="shopimg" data-emoji="${i.icon}" src="${asset('/assets/shop/' + i.id + '.png')}" alt="" width="64" height="64"></span><b>${i.name}</b><p>${i.description}</p>
             ${own ? h`<button class="btn small ${worn ? 'secondary' : ''}" data-wear="${i.id}" data-slot="${slot}" aria-pressed="${worn}">${worn ? '착용 중 (벗기)' : '착용하기'}</button>` : h`<button class="btn small" data-buy="${i.id}" ${d.points < i.price && 'disabled'}>${i.price}P로 구매</button>`}</div>`;
         })}</div></section>`)}</div></div>`);
   };

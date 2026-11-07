@@ -1,3 +1,4 @@
+import { asset } from './assets.js';
 // 픽셀 아바타: 피부색과 상점 아이템(모자·옷·소품)이 그림에 반영된다. 에셋 이미지가 없어도 코드로 그린다.
 const INK = '#2B1D12';
 const FRONT = ['....hhhhhh....', '..hhhhhhhhhh..', '.hhhhhhhhhhhh.', '.hhsssssssshh.', '.hhsssssssshh.', '.hssksssskssh.', '.hsspsssspssh.', '..hssssssssh..', '....ssssss....', '...bbbbbbbb...', '..bbbbbbbbbb..', '.sbbbbbbbbbbs.', '.sbbbbbbbbbbs.', '..bbbbbbbbbb..', '..gggggggggg..', '..gggg..gggg..', '..gggg..gggg..', '..wwww..wwww..', '..wwww..wwww..'];
@@ -38,7 +39,7 @@ export function avatarSvg(avatar = {}, face = 'down', px) {
 // 상점 아이템은 같은 4×4 규격의 투명 PNG를 item-<아이템id>.png 로 두면 캐릭터 위에 겹쳐 그린다(없는 아이템은 겹치지 않는다).
 const SPR = { base: false, items: new Set() };
 const SPR_BASE = '/assets/avatar/character-walk.png'; // 전체 경로를 문자열로 둔다(단독 실행 빌드가 이 경로를 그림 데이터로 바꿔 넣는다)
-const itemUrl = (id) => `/assets/avatar/item-${id}.png`;
+const itemUrl = (id) => asset(`/assets/avatar/item-${id}.png`);
 const probe = (url) => new Promise((res) => { const i = new Image(); i.onload = () => res(true); i.onerror = () => res(false); i.src = url; });
 export async function loadSprites() {
   SPR.base = await probe(SPR_BASE);

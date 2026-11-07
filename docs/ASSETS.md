@@ -250,3 +250,12 @@
 2행(옷): 갈색 니트 가디건 / 남색 사서 망토 / 주황빛 갈색 가죽 비행사 재킷
 3행(소품): 은빛 깃펜과 잉크병 / 황동 회전 독서대(펼친 책) / 유리병 속 붉은 장미
 ```
+
+## 7. 반영된 에셋 (제공 이미지 → 파일)
+
+| 파일 | 출처·용도 | 만드는 법 |
+|---|---|---|
+| `public/assets/shop/<아이템id>.png` ×9 | 상점 아이템 시트(모자·옷·소품) → 상점 카드 그림 | `python3 scripts/slice-assets.py <상점시트> <종류아이콘시트>` |
+| `public/assets/kinds/<종류>.png` ×9 | 종류 아이콘 시트(한 줄 평·서평·팬아트·굿즈·코스프레·외전·웹소설·웹툰·기타) → 탭·뱃지·작성 힌트 | 같은 스크립트 |
+| `public/assets/avatar/character-walk.png` | 캐릭터 4×4 시트(아래·왼쪽·오른쪽·위) | `python3 scripts/make-character-sheet.py <원본>` (머리 위 여유 포함) |
+| `public/assets/avatar/item-<id>.png` ×9 | 캐릭터에 입히는 겹침 시트(같은 4×4). 모자·소품은 프레임마다 머리/몸 위치에 아이템 그림을 얹고, 옷은 셔츠 색만 바꾼다 | `python3 scripts/make-item-sprites.py` |
