@@ -168,3 +168,10 @@ main:focus, main:focus-visible { box-shadow: none !important; outline: none; }
 .hero-map { background-size: cover; background-position: center 35%; }
 .hero-map::before { content: ""; position: absolute; inset: 0; background: rgba(251, 244, 226, .18); z-index: 1; }
 @media (min-width: 760px) { #nav { flex-wrap: nowrap; gap: 2px; } #nav a, #nav button { padding: 4px 9px; white-space: nowrap; } .me-chip .nm { max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } }
+
+/* 이미지 스프라이트 아바타 (4×4 시트) */
+.spritebox { display: block; position: relative; width: 100%; height: 100%; aspect-ratio: 14 / 19; --f: 0; }
+.spritebox .lay { position: absolute; inset: 0; background-repeat: no-repeat; background-size: 400% 400%; image-rendering: pixelated; background-position: calc(var(--f) * 100% / 3) calc(var(--row) * 100% / 3); }
+.vplayer.walking .spritebox .lay { animation: sprwalk .6s steps(1) infinite; }
+@keyframes sprwalk { 0% { background-position-x: 0%; } 25% { background-position-x: 33.333%; } 50% { background-position-x: 66.667%; } 75% { background-position-x: 100%; } }
+.avprev .spritebox { height: 220px; width: auto; margin-bottom: 14px; } .me-chip .spritebox { width: 100%; height: 100%; }

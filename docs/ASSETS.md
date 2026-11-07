@@ -237,7 +237,8 @@
 | `public/assets/village/plaza-map.jpg` | ✅ 있음(프로토타입 제공) | 광장 지도 1376×768. 바꾸려면 같은 16:9 비율, 건물 위치가 달라지면 `public/village.js`의 `BUILDINGS[].pin/door`(%) 조정 |
 | `public/assets/library-hall.jpg` | ✅ 있음 | 대도서관 배너 사진 |
 | `server/demo/demian.jpg` `prince.jpg` | ✅ 있음 | 데모 팬아트·굿즈 이미지 |
-| 아바타 걷기 시트(4방향×4프레임) | ⚪ 아직 | 지금은 코드로 그린 도트 아바타. 이미지로 교체하려면 2-1의 `character-walk.png` 규격과 요청문을 쓰고 `village.js`/`avatar.js`에 연결 필요 |
+| 아바타 걷기 시트(4방향×4프레임) | 🟢 코드 연결됨 | `public/assets/avatar/character-walk.png`를 넣으면 자동 교체(코드 수정 없음). 규격은 해당 폴더 README, 요청문은 2-1 |
+| 상점 아이템 겹침 시트 9종 | 🟢 코드 연결됨 | `public/assets/avatar/item-<아이템id>.png` (캐릭터와 같은 4×4 규격, 아이템만) |
 | 상점 아이템 그림 9종 | ⚪ 아직 | 지금은 이모지 아이콘. 모자 3·옷 3·소품 3을 도트(각 64×64)로 만들면 교체 가능 |
 | 전시관 빈 이미지, 작품 이미지 없음 대체 | ⚪ 아직 | 3장의 빈 상태 그림 참고 |
 

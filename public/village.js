@@ -1,6 +1,6 @@
 // 광장(마을 홈): 숲 마을 지도 위를 캐릭터가 걸어 다니고, 건물 입구에서 입장한다.
 // 지도 이미지는 public/assets/village/plaza-map.jpg. 건물 핀 위치는 지도 위 건물에 맞춘 % 좌표다.
-import { avatarSvg } from '/avatar.js';
+import { avatarHtml, hasSprites } from '/avatar.js';
 
 const MAP_SRC = '/assets/village/plaza-map.jpg';
 const SPEED = 30;                         // % / 초
@@ -32,7 +32,7 @@ export async function mountVillage(container, cb, user) {
     <img class="pmap" src="${MAP_SRC}" alt="" draggable="false">
     <div class="pwarm" aria-hidden="true"></div>
     ${pins}
-    <div class="vactor vplayer" style="left:50%;top:70%"><span class="vname">${esc(user?.nickname || '탐서가')}</span><div class="vspr">${avatarSvg(user?.avatar, 'up')}</div><div class="vshadow"></div></div>
+    <div class="vactor vplayer" style="left:50%;top:70%"><span class="vname">${esc(user?.nickname || '탐서가')}</span><div class="vspr">${avatarHtml(user?.avatar, 'up')}</div><div class="vshadow"></div></div>
     <div class="vhint" aria-hidden="true">방향키·WASD 걷기 · Enter 들어가기 · 지도를 눌러 이동</div></div>`;
 
   const box = container.querySelector('.plaza'); const player = container.querySelector('.vplayer'); const spr = container.querySelector('.vspr');
@@ -65,7 +65,8 @@ export async function mountVillage(container, cb, user) {
   }
   function paint() {
     player.style.left = `${S.x}%`; player.style.top = `${S.y}%`; player.classList.toggle('walking', S.walking);
-    if (S.face !== shownFace) { shownFace = S.face; spr.innerHTML = avatarSvg(user?.avatar, S.face); spr.style.transform = S.face === 'left' ? 'scaleX(-1)' : ''; }
+    // 스프라이트 시트에는 왼쪽 행이 따로 있어 뒤집지 않고, 코드 도트만 뒤집는다
+    if (S.face !== shownFace) { shownFace = S.face; spr.innerHTML = avatarHtml(user?.avatar, S.face); spr.style.transform = !hasSprites() && S.face === 'left' ? 'scaleX(-1)' : ''; }
     const n = S.walking ? null : nearest(); const id = n ? n.id : null;
     if (id !== nearId) { nearId = id; pinEls.forEach((p) => p.classList.toggle('near', p.dataset.id === id)); cb.onNear?.(n || null); }
   }

@@ -84,13 +84,13 @@ function renderNav() {
   nav.innerHTML = NAV.map(([href, t]) => link(href, t)).join('') + '<span class="sp"></span>'
     + `<a class="pts" href="#/shop" title="독서 포인트 (상점에서 사용)" aria-label="독서 포인트 ${state.me.points}점"><span class="coin" aria-hidden="true"></span><span>${state.me.points.toLocaleString()}</span><span class="small">P</span></a>`
     + (state.me.role === 'admin' ? link('#/admin', '운영') : '')
-    + `<a class="me-chip" href="#/settings" title="설정"><span class="avmini">${avatarSvg(state.me.avatar, 'down')}</span><span class="nm small">${esc(state.me.nickname)}</span></a>`;
+    + `<a class="me-chip" href="#/settings" title="설정"><span class="avmini">${avatarHtml(state.me.avatar, 'down')}</span><span class="nm small">${esc(state.me.nickname)}</span></a>`;
 }
 async function refreshMe() { try { state.me = (await api('GET', '/api/me')).user; renderNav(); } catch { /* 표시용 갱신 실패는 무시 */ } }
 const pts = (n) => (n ? ` (+${n}P)` : '');
 
 import { mountVillage, BUILDINGS } from '/village.js';
-import { avatarSvg, LOOK } from '/avatar.js';
+import { avatarSvg, avatarHtml, loadSprites, LOOK } from '/avatar.js';
 
 const GALLERY_TABS = [['all', '전체'], ['fanart', '팬아트 일러스트'], ['goods', '굿즈 기획'], ['spinoff', '외전·패러렐 글'], ['webtoon', '웹툰 콘티'], ['etc', '기타']];
 const STATUS = { reading: '읽는 중', completed: '완독', want_to_read: '읽고 싶은' };
@@ -422,7 +422,7 @@ views.user = async ([id]) => {
   loading();
   let d;
   try { d = await api('GET', `/api/users/${id}`); } catch (e) { return failure(e, () => views.user([id])); }
-  render(h`<div class="row between"><div class="row" style="flex-wrap:nowrap"><span class="avmini" style="width:48px;height:64px">${new Raw(avatarSvg(d.user.avatar, 'down'))}</span><div><h1>${d.user.nickname}님의 서재</h1><p class="muted" style="margin:0">${d.user.bio || '공개된 책과 콘텐츠만 보여요.'}</p></div></div>${!d.isMe && h`<button class="btn secondary small" id="rep">프로필 신고</button>`}</div>
+  render(h`<div class="row between"><div class="row" style="flex-wrap:nowrap"><span class="avmini" style="width:48px;height:64px">${new Raw(avatarHtml(d.user.avatar, 'down'))}</span><div><h1>${d.user.nickname}님의 서재</h1><p class="muted" style="margin:0">${d.user.bio || '공개된 책과 콘텐츠만 보여요.'}</p></div></div>${!d.isMe && h`<button class="btn secondary small" id="rep">프로필 신고</button>`}</div>
     ${d.books.length ? d.books.map((b) => h`<section class="card" style="margin-bottom:16px"><div class="row" style="flex-wrap:nowrap;align-items:flex-start"><a href="#/book/${b.id}" style="width:80px;flex:none">${cover(b)}</a>
       <div style="flex:1;min-width:0" class="stack"><h2><a href="#/book/${b.id}">${b.title}</a></h2>${b.contents.map((c) => workCard(c))}</div></div></section>`)
       : h`<div class="empty card">아직 공개된 기록이 없어요.</div>`}`);
@@ -456,7 +456,7 @@ views.shop = async () => {
   const slots = [['hat', '모자'], ['outfit', '옷'], ['accessory', '소품']];
   const draw = () => {
     render(h`<h1>꾸미기 상점</h1><p class="muted">책을 담고 기록을 남기며 모은 독서 포인트로 캐릭터를 꾸며요. 현재 <b>${d.points.toLocaleString()}P</b></p>
-      <div class="shop-grid"><div><div class="avprev" aria-label="캐릭터 미리보기">${new Raw(avatarSvg(d.avatar, 'down'))}</div>
+      <div class="shop-grid"><div><div class="avprev" aria-label="캐릭터 미리보기">${new Raw(avatarHtml(d.avatar, 'down'))}</div>
         <div class="card" style="margin-top:12px"><b class="small">피부색</b><div class="skins" role="group" aria-label="피부색">${d.skins.map((c) => h`<button type="button" class="skin" data-skin="${c}" style="background:${c}" aria-label="피부색 ${c}" aria-pressed="${d.avatar.skin === c}"></button>`)}</div></div></div>
         <div class="stack">${slots.map(([slot, label]) => h`<section><h2>${label}</h2><div class="items">${d.items.filter((i) => i.slot === slot).map((i) => {
           const own = d.inventory.includes(i.id); const worn = d.avatar[slot] === i.id;
@@ -550,6 +550,7 @@ async function boot() {
   try {
     const [cfg, auth, me] = await Promise.all([api('GET', '/api/categories'), api('GET', '/api/auth/config'), api('GET', '/api/me')]);
     Object.assign(state, { cfg, auth, me: me.user });
+    await loadSprites(); // 캐릭터 이미지가 있으면 사용
   } catch (e) { return render(h`<div class="empty card"><p class="err" role="alert">${e.message}</p><button class="btn" id="rt">다시 시도</button></div>`), ($('#rt').onclick = boot); }
   if (state.me && (!location.hash || location.hash === '#/' || location.hash === '#')) location.hash = state.me.onboarded ? '#/home' : '#/onboarding';
   else route();
