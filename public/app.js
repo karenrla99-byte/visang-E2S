@@ -82,7 +82,7 @@ function renderNav() {
     state.me.role === 'admin' ? link('#/admin', '운영') : ''].join('');
 }
 
-import { mountVillage } from '/village.js';
+import { mountVillage, forestStrip } from '/village.js';
 
 const SOON = [['미술관', '팬아트를 전시하는 공간'], ['글 작업실', '외전·웹소설을 쓰는 공간'], ['웹툰 공간', '연재 작품을 모으는 공간'], ['굿즈 상점', '굿즈 기획과 관심 표현']];
 
@@ -92,21 +92,20 @@ const views = {};
 views.landing = async () => {
   if (state.me) return (location.hash = state.me.onboarded ? '#/home' : '#/onboarding');
   const failed = location.hash.includes('login=failed');
-  render(h`<section class="hero">
-    <div class="brand px" style="justify-content:center;font-size:2rem"><span class="brand-mark" aria-hidden="true"></span>BookRest</div>
-    <h1>북레스트</h1>
-    <p class="quote">내가 읽은 책은 나의 이야기가 되고,<br>우리의 이야기는 하나의 도서관이 됩니다.</p>
-    <div class="login-box" aria-label="로그인">
-      ${failed && h`<p class="err" role="alert">로그인에 실패했습니다. 다시 시도해 주세요.</p>`}
-      ${state.auth.providers.map((p) => h`<a class="btn" href="/api/auth/${p.id}/start">${p.label}(으)로 시작하기</a>`)}
-      ${state.auth.devLogin && h`<form id="dev" class="card stack" style="text-align:left"><label for="dn" style="margin-top:0">개발용 간편 로그인</label><input id="dn" maxlength="20" placeholder="닉네임" required><button class="btn">입장하기</button><button type="button" id="adm" class="btn secondary small">운영자로 입장</button></form>`}
-      ${!state.auth.providers.length && !state.auth.devLogin && h`<p class="muted">현재 사용할 수 있는 로그인 방식이 없습니다.</p>`}
-    </div>
-    <div class="menu-list" style="max-width:720px;margin:32px auto 0;text-align:left">
-      <div class="card"><b>기록</b><br><span class="muted small">읽은 책을 책장에 꽂고 비공개 감상과 공개 한 줄 평을 남겨요.</span></div>
-      <div class="card"><b>창작</b><br><span class="muted small">팬아트, 외전, 굿즈 기획까지 책을 바탕으로 만들어요.</span></div>
-      <div class="card"><b>발견</b><br><span class="muted small">같은 책에 쌓인 다른 사람의 관점과 작품을 감상해요.</span></div>
-    </div></section>`);
+  render(h`<section class="hero" aria-labelledby="logo">
+      <div class="forest" aria-hidden="true">${new Raw(forestStrip())}</div>
+      <h1 class="logo" id="logo">BookRest</h1>
+      <p class="tagline">읽은 책은 나의 이야기가 되고,<br>우리의 이야기는 하나의 도서관이 됩니다.</p>
+      <div class="login-box" aria-label="로그인">
+        ${failed && h`<p class="tagline err" role="alert" style="margin:0">로그인에 실패했습니다. 다시 시도해 주세요.</p>`}
+        ${state.auth.providers.map((p) => h`<a class="btn" href="/api/auth/${p.id}/start">${p.label}(으)로 시작하기</a>`)}
+        ${state.auth.devLogin && h`<form id="dev" class="card stack"><label for="dn" style="margin-top:0">개발용 간편 로그인</label><input id="dn" maxlength="20" placeholder="닉네임" required><button class="btn">입장하기</button><button type="button" id="adm" class="btn secondary small">운영자로 입장</button></form>`}
+        ${!state.auth.providers.length && !state.auth.devLogin && h`<p class="tagline">현재 사용할 수 있는 로그인 방식이 없습니다.</p>`}
+      </div></section>
+    <div class="features">
+      <div class="card"><div class="card-h"><span class="no">01</span>기록</div><p>읽은 책을 책장에 꽂고 비공개 감상과 공개 한 줄 평을 남겨요.</p></div>
+      <div class="card"><div class="card-h"><span class="no">02</span>창작</div><p>팬아트, 외전, 굿즈 기획까지 책을 바탕으로 만들어요.</p></div>
+      <div class="card"><div class="card-h"><span class="no">03</span>발견</div><p>같은 책에 쌓인 다른 사람의 관점과 작품을 감상해요.</p></div></div>`);
   const login = async (name, admin) => { try { await api('POST', '/api/auth/dev', { name, admin }); await boot(); } catch (e) { toast(e.message); } };
   $('#dev')?.addEventListener('submit', (e) => { e.preventDefault(); login($('#dn').value, false); });
   $('#adm')?.addEventListener('click', () => login('운영자', true));
@@ -135,7 +134,7 @@ views.onboarding = async () => {
 };
 
 views.home = async () => {
-  render(h`<h1>안녕하세요, ${state.me.nickname}님</h1><p class="muted">마을을 걸어 다니며 건물에 들어가 보세요. 걷기 어렵다면 아래 메뉴를 이용할 수 있어요.</p>
+  render(h`<h1>안녕하세요, ${state.me.nickname}님</h1><p class="muted">숲속 마을을 자유롭게 돌아다니며 건물에 들어가 보세요. 걷기 어렵다면 아래 메뉴를 이용할 수 있어요.</p>
     <div id="village" class="village-wrap"><p class="empty">마을을 불러오는 중…</p></div>
     <nav class="menu-list" aria-label="공간 이동 메뉴">
       <a href="#/library"><svg class="ic" viewBox="0 0 8 8" aria-hidden="true"><rect width="8" height="8" fill="#b5653a"/><rect x="1" y="2" width="6" height="5" fill="#e9d3a4"/><rect x="3" y="4" width="2" height="3" fill="#6b3f1f"/></svg><span><b>대도서관</b><br><span class="muted small">책 검색 · 탐색 · 추천</span></span></a>

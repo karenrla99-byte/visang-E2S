@@ -1,22 +1,24 @@
 # 마을 이미지 에셋
 
-이 폴더에 아래 이름으로 PNG(투명 배경 권장)를 넣으면 마을 화면이 자동으로 교체된다.
-**파일이 없으면 코드로 그린 기본 도트 그래픽이 대신 나온다.** 하나씩만 넣어도 된다.
+이 폴더에 아래 이름으로 PNG를 넣으면 숲 마을이 자동으로 교체된다. **없는 파일은 코드로 그린 기본 도트가 대신 나온다.** 하나씩만 넣어도 된다.
+**자세한 규격과 이미지 생성 요청문은 [`docs/ASSETS.md`](../../../docs/ASSETS.md)**, 디자인 기준은 [`docs/DESIGN.md`](../../../docs/DESIGN.md).
 
-| 파일 | 내용 | 규격 |
+| 파일 | 크기(권장) | 내용 |
 |---|---|---|
-| `bg.png` | 하늘·언덕·숲 배경 | 가로로 긴 이미지(권장 2400×600). 아래쪽 땅은 `ground.png`가 따로 그린다. 가로로 반복되지 않고 늘려서 쓴다 |
-| `ground.png` | 잔디+흙 띠 | 가로 반복 가능한 타일(권장 높이 100px). 좌우가 이어지게 |
-| `character-walk.png` | 주인공 걷기 | **가로 8프레임 시트**, 프레임 크기 동일, 오른쪽을 보는 모습, 여백 없이 발이 이미지 아래 끝에 닿게 자른 것 |
-| `character-idle.png` | 주인공 멈춤(선택) | 1프레임, 오른쪽 보는 모습. 없으면 걷기 시트의 첫 프레임 |
-| `dog.png` | 안내견 | 1프레임, 오른쪽 보는 모습, 발이 아래 끝에 닿게 |
-| `building-library.png` | 대도서관 | 발(건물 바닥)이 이미지 아래 끝에 닿게 자른 것. 가로:세로 ≈ 1.2:1 |
-| `building-shelf.png` | 내 서재 | 〃 |
-| `building-art.png` | 미술관(준비 중) | 〃 |
-| `building-writing.png` | 글 작업실(준비 중) | 〃 |
-| `building-webtoon.png` | 웹툰 공간(준비 중) | 〃 |
-| `building-goods.png` | 굿즈 상점(준비 중) | 〃 |
+| `character-walk.png` | 448×608 | 4열×4행. 행 순서 **아래·왼쪽·오른쪽·위**, 한 행 4프레임 걷기, 발이 아래 가장자리에 닿게 |
+| `building-library.png` | 1040×800 | 대도서관 |
+| `building-shelf.png` | 720×600 | 내 서재 |
+| `building-art.png` | 1140×810 | 미술관(준비 중) |
+| `building-writing.png` | 750×600 | 글 작업실(준비 중) |
+| `building-webtoon.png` | 750×600 | 웹툰 공간(준비 중) |
+| `building-goods.png` | 780×600 | 굿즈 상점(준비 중) |
+| `backdrop.png` | 2400×360 | 노을 하늘 + 먼 언덕·소나무 (아래 끝이 풀밭 시작선) |
+| `ground-tile.png` | 256×256 | 이음새 없는 풀밭 타일 (128px로 표시) |
+| `plaza.png` | 640×380 | 타원형 돌 광장, 바깥 투명 |
+| `tree-1.png` `tree-2.png` `tree-3.png` | 480×600 / 570×630 / 360×600 | 참나무 / 큰 참나무 / 소나무, 밑동이 아래 가운데 |
+| `decor-bench.png` `decor-lamp.png` `decor-sign.png` `decor-bush.png` `decor-rock.png` `decor-fence.png` `decor-banner.png` `decor-flowerbed.png` `decor-bridge.png` | 3× 해상도 | 벤치·등불·책 팻말·덤불·바위·울타리·현수막·꽃밭·돌다리 |
 
-- 도트는 확대해도 번지지 않도록 `image-rendering: pixelated`로 표시한다. 배경이 투명해야 하는 이미지(캐릭터·건물·안내견)에 흰 배경이 남아 있으면 그대로 보인다.
-- 캐릭터가 서 있는 땅의 높이는 코드가 맞춘다(`public/village.js`의 `GROUND`).
-- 대체 텍스트와 이동 기능은 코드가 제공하므로 이미지에 글자를 넣을 필요가 없다. 간판 글씨도 코드가 얹는다.
+- 건물·나무·소품은 **투명 PNG**, 밑바닥이 이미지 아래 가장자리에 닿게 자른다. 건물은 표시 높이가 고정이고 너비는 그림 비율로 정해진다.
+- 길과 개울은 코드로 그린다(색·위치는 `public/village.js`).
+- 그림에 글자를 넣지 않는다. 간판·안내는 코드가 얹는다.
+- 도트가 번지지 않도록 `image-rendering: pixelated`로 표시한다.
